@@ -1,15 +1,21 @@
-
+MYFLAG = -DNO_USE_PAPI
 CXX = g++-5
 PAPI_FLAG = -lpapi
-CXX_FLAG = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof $(PAPI_FLAG)
-GMON_FLAG = 
+CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(MYFLAG) $(PAPI_FLAG)
+GMON_FLAG =
 OPT_FLAG = -O2
 PRELOAD_LIB = LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so
-SRC = ./test/main.cpp ./src/bwtree.h ./src/bloom_filter.h ./src/atomic_stack.h ./src/sorted_small_set.h ./test/test_suite.h ./test/test_suite.cpp ./test/random_pattern_test.cpp ./test/basic_test.cpp ./test/mixed_test.cpp ./test/performance_test.cpp ./test/stress_test.cpp ./test/iterator_test.cpp ./test/misc_test.cpp ./test/benchmark_bwtree_full.cpp ./benchmark/spinlock/spinlock.cpp ./test/benchmark_btree_full.cpp ./test/benchmark_art_full.cpp
-OBJ = ./build/main.o ./build/bwtree.o ./build/test_suite.o ./build/random_pattern_test.o ./build/basic_test.o ./build/mixed_test.o ./build/performance_test.o ./build/stress_test.o ./build/iterator_test.o ./build/misc_test.o ./build/benchmark_bwtree_full.o ./build/spinlock.o ./build/benchmark_btree_full.o ./build/benchmark_art_full.o ./build/art.o
+SRC = ./test/main.cpp ./src/bwtree.h ./src/bloom_filter.h ./src/atomic_stack.h ./src/sorted_small_set.h ./test/test_suite.h ./test/test_suite.cpp ./test/random_pattern_test.cpp ./test/basic_test.cpp ./test/mixed_test.cpp ./test/performance_test.cpp ./test/stress_test.cpp ./test/iterator_test.cpp ./test/misc_test.cpp ./test/benchmark_bwtree_full.cpp ./benchmark/spinlock/spinlock.cpp ./test/benchmark_btree_full.cpp ./test/benchmark_art_full.cpp ./test/testscript.cpp
+OBJ = ./build/main.o ./build/bwtree.o ./build/test_suite.o ./build/random_pattern_test.o ./build/basic_test.o ./build/mixed_test.o ./build/performance_test.o ./build/stress_test.o ./build/iterator_test.o ./build/misc_test.o ./build/benchmark_bwtree_full.o ./build/spinlock.o ./build/benchmark_btree_full.o ./build/benchmark_art_full.o ./build/art.o ./build/testscript.o
 
 
-all: main
+all: main create_input
+
+create_input: ./build/create_input.o
+	$(CXX) $(CXX_FLAG) ./build/create_input.o -o ./test/create_input
+
+./build/create_input.o:
+	$(CXX) $(CXX_FLAG) ./test/create_input_file.cpp -c -o ./build/create_input.o
 
 main: $(OBJ)
 	$(CXX) $(OBJ) -o ./main $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
@@ -28,10 +34,10 @@ main: $(OBJ)
 
 ./build/random_pattern_test.o: ./test/random_pattern_test.cpp ./src/bwtree.h
 	$(CXX) ./test/random_pattern_test.cpp -c -o ./build/random_pattern_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
-	
+
 ./build/basic_test.o: ./test/basic_test.cpp ./src/bwtree.h
 	$(CXX) ./test/basic_test.cpp -c -o ./build/basic_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
-	
+
 ./build/mixed_test.o: ./test/mixed_test.cpp ./src/bwtree.h
 	$(CXX) ./test/mixed_test.cpp -c -o ./build/mixed_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
 
@@ -46,16 +52,18 @@ main: $(OBJ)
 
 ./build/benchmark_art_full.o:
 	$(CXX) ./test/benchmark_art_full.cpp -c -o ./build/benchmark_art_full.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
-	
+
 ./build/stress_test.o: ./test/stress_test.cpp ./src/bwtree.h
 	$(CXX) ./test/stress_test.cpp -c -o ./build/stress_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
-	
+
 ./build/iterator_test.o: ./test/iterator_test.cpp ./src/bwtree.h
 	$(CXX) ./test/iterator_test.cpp -c -o ./build/iterator_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
 
 ./build/misc_test.o: ./test/misc_test.cpp ./src/bwtree.h
 	$(CXX) ./test/misc_test.cpp -c -o ./build/misc_test.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
 
+./build/testscript.o: ./test/testscript.cpp ./src/bwtree.h
+	$(CXX) ./test/testscript.cpp -c -o ./build/testscript.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
 
 ./build/spinlock.o:
 	$(CXX) ./benchmark/spinlock/spinlock.cpp -c -o ./build/spinlock.o $(CXX_FLAG) $(OPT_FLAG) $(GMON_FLAG)
@@ -72,7 +80,7 @@ small-size:
 	make clean
 	make OPT_FLAG=" -Os -DNDEBUG -DBWTREE_NODEBUG"
 
-benchmark-all: main 
+benchmark-all: main
 	$(PRELOAD_LIB) ./main --benchmark-all
 
 benchmark-bwtree: main
@@ -95,7 +103,7 @@ stress-test: main
 
 epoch-test: main
 	$(PRELOAD_LIB) ./main --epoch-test
-	
+
 infinite-insert-test: main
 	$(PRELOAD_LIB) ./main --infinite-insert-test
 
@@ -105,6 +113,11 @@ email-test: main
 mixed-test: main
 	$(PRELOAD_LIB) ./main --mixed-test
 
+mytest: main
+	make create_input
+	./test/create_input
+	$(PRELOAD_LIB) ./main --my-test
+
 prepare:
 	mkdir -p build
 	mkdir -p ./stl_test/bin
@@ -113,4 +126,5 @@ clean:
 	rm -f ./build/*
 	rm -f *.log
 	rm -f ./main
-	
+	rm -f ./test/create_input
+

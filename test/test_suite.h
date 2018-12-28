@@ -85,10 +85,10 @@ using TreeType = BwTree<long int,
                         long int,
                         KeyComparator,
                         KeyEqualityChecker>;
-                        
+
 using BTreeType = btree_multimap<long, long, KeyComparator>;
 using ARTType = art_tree;
-                        
+
 using LeafRemoveNode = typename TreeType::LeafRemoveNode;
 using LeafInsertNode = typename TreeType::LeafInsertNode;
 using LeafDeleteNode = typename TreeType::LeafDeleteNode;
@@ -115,7 +115,7 @@ using Context = typename TreeType::Context;
 /*
  * Common Infrastructure
  */
- 
+
 #define END_TEST do{ \
                 print_flag = true; \
                 delete t1; \
@@ -135,9 +135,9 @@ using Context = typename TreeType::Context;
  * argument
  */
 template <typename Fn, typename... Args>
-void LaunchParallelTestID(TreeType *tree_p, 
-                          uint64_t num_threads, 
-                          Fn &&fn, 
+void LaunchParallelTestID(TreeType *tree_p,
+                          uint64_t num_threads,
+                          Fn &&fn,
                           Args &&...args) {
   std::vector<std::thread> thread_group;
 
@@ -145,19 +145,19 @@ void LaunchParallelTestID(TreeType *tree_p,
     // Update the GC array
     tree_p->UpdateThreadLocal(num_threads);
   }
-  
+
   auto fn2 = [tree_p, &fn](uint64_t thread_id, Args ...args) {
     if(tree_p != nullptr) {
       tree_p->AssignGCID(thread_id);
     }
-    
+
     fn(thread_id, args...);
-    
+
     if(tree_p != nullptr) {
       // Make sure it does not stand on the way of other threads
       tree_p->UnregisterThread(thread_id);
     }
-    
+
     return;
   };
 
@@ -170,12 +170,12 @@ void LaunchParallelTestID(TreeType *tree_p,
   for (uint64_t thread_itr = 0; thread_itr < num_threads; ++thread_itr) {
     thread_group[thread_itr].join();
   }
-  
+
   // Restore to single thread mode after all threads have finished
   if(tree_p != nullptr) {
     tree_p->UpdateThreadLocal(1);
   }
-  
+
   return;
 }
 
@@ -197,7 +197,7 @@ class Random {
   std::uniform_int_distribution<IntType> dist;
 
  public:
-  
+
   /*
    * Constructor - Initialize random seed and distribution object
    */
@@ -206,48 +206,48 @@ class Random {
     engine{device()},
     dist{lower, upper}
   {}
-  
+
   /*
    * Get() - Get a random number of specified type
    */
   inline IntType Get() {
     return dist(engine);
   }
-  
+
   /*
    * operator() - Grammar sugar
    */
   inline IntType operator()() {
-    return Get(); 
+    return Get();
   }
 };
 
 /*
- * class SimpleInt64Random - Simple paeudo-random number generator 
+ * class SimpleInt64Random - Simple paeudo-random number generator
  *
  * This generator does not have any performance bottlenect even under
  * multithreaded environment, since it only uses local states. It hashes
  * a given integer into a value between 0 - UINT64T_MAX, and in order to derive
- * a number inside range [lower bound, upper bound) we should do a mod and 
+ * a number inside range [lower bound, upper bound) we should do a mod and
  * addition
  *
  * This function's hash method takes a seed for generating a hashing value,
  * together with a salt which is used to distinguish different callers
  * (e.g. threads). Each thread has a thread ID passed in the inlined hash
- * method (so it does not pose any overhead since it is very likely to be 
+ * method (so it does not pose any overhead since it is very likely to be
  * optimized as a register resident variable). After hashing finishes we just
  * normalize the result which is evenly distributed between 0 and UINT64_T MAX
  * to make it inside the actual range inside template argument (since the range
  * is specified as template arguments, they could be unfold as constants during
  * compilation)
  *
- * Please note that here upper is not inclusive (i.e. it will not appear as the 
+ * Please note that here upper is not inclusive (i.e. it will not appear as the
  * random number)
  */
 template <uint64_t lower, uint64_t upper>
 class SimpleInt64Random {
  public:
-   
+
   /*
    * operator()() - Mimics function call
    *
@@ -282,25 +282,25 @@ class Timer {
  private:
   std::chrono::time_point<std::chrono::system_clock> start;
   std::chrono::time_point<std::chrono::system_clock> end;
-  
- public: 
- 
-  /* 
+
+ public:
+
+  /*
    * Constructor
    *
-   * It takes an argument, which denotes whether the timer should start 
+   * It takes an argument, which denotes whether the timer should start
    * immediately. By default it is true
    */
-  Timer(bool start = true) : 
+  Timer(bool start = true) :
     start{},
     end{} {
     if(start == true) {
       Start();
     }
-    
+
     return;
   }
-  
+
   /*
    * Start() - Starts timer until Stop() is called
    *
@@ -309,10 +309,10 @@ class Timer {
    */
   inline void Start() {
     start = std::chrono::system_clock::now();
-    
+
     return;
   }
-  
+
   /*
    * Stop() - Stops timer and returns the duration between the previous Start()
    *          and the current Stop()
@@ -322,10 +322,10 @@ class Timer {
    */
   inline double Stop() {
     end = std::chrono::system_clock::now();
-    
+
     return GetInterval();
   }
-  
+
   /*
    * GetInterval() - Returns the length of the time interval between the latest
    *                 Start() and Stop()
@@ -337,59 +337,59 @@ class Timer {
 };
 
 /*
- * class Envp() - Reads environmental variables 
+ * class Envp() - Reads environmental variables
  */
 class Envp {
  public:
   /*
    * Get() - Returns a string representing the value of the given key
    *
-   * If the key does not exist then just use empty string. Since the value of 
+   * If the key does not exist then just use empty string. Since the value of
    * an environmental key could not be empty string
    */
   static std::string Get(const std::string &key) {
     char *ret = getenv(key.c_str());
     if(ret == nullptr) {
-      return std::string{""}; 
-    } 
-    
+      return std::string{""};
+    }
+
     return std::string{ret};
   }
-  
+
   /*
    * operator() - This is called with an instance rather than class name
    */
   std::string operator()(const std::string &key) const {
     return Envp::Get(key);
   }
-  
+
   /*
    * GetValueAsUL() - Returns the value by argument as unsigned long
    *
-   * If the env var is found and the value is parsed correctly then return true 
+   * If the env var is found and the value is parsed correctly then return true
    * If the env var is not found then retrun true, and value_p is not modified
    * If the env var is found but value could not be parsed correctly then
-   *   return false and value is not modified 
+   *   return false and value is not modified
    */
-  static bool GetValueAsUL(const std::string &key, 
+  static bool GetValueAsUL(const std::string &key,
                            unsigned long *value_p) {
     const std::string value = Envp::Get(key);
-    
+
     // Probe first character - if is '\0' then we know length == 0
     if(value.c_str()[0] == '\0') {
       return true;
     }
-    
+
     unsigned long result;
-    
+
     try {
       result = std::stoul(value);
     } catch(...) {
-      return false; 
-    } 
-    
+      return false;
+    }
+
     *value_p = result;
-    
+
     return true;
   }
 };
@@ -397,7 +397,7 @@ class Envp {
 /*
  * class Zipfian - Generates zipfian random numbers
  *
- * This class is adapted from: 
+ * This class is adapted from:
  *   https://github.com/efficient/msls-eval/blob/master/zipf.h
  *   https://github.com/efficient/msls-eval/blob/master/util.h
  *
@@ -406,33 +406,33 @@ class Envp {
  * Usage:
  *   theta = 0 gives a uniform distribution.
  *   0 < theta < 0.992 gives some Zipf dist (higher theta = more skew).
- * 
+ *
  * YCSB's default is 0.99.
  * It does not support theta > 0.992 because fast approximation used in
  * the code cannot handle that range.
-  
+
  * As extensions,
  *   theta = -1 gives a monotonely increasing sequence with wraparounds at n.
- *   theta >= 40 returns a single key (key 0) only. 
+ *   theta >= 40 returns a single key (key 0) only.
  */
 class Zipfian {
  private:
   // number of items (input)
-  uint64_t n;    
+  uint64_t n;
   // skewness (input) in (0, 1); or, 0 = uniform, 1 = always zero
-  double theta;  
+  double theta;
   // only depends on theta
-  double alpha;  
+  double alpha;
   // only depends on theta
   double thres;
   // last n used to calculate the following
-  uint64_t last_n;  
-  
+  uint64_t last_n;
+
   double dbl_n;
   double zetan;
   double eta;
-  uint64_t rand_state; 
- 
+  uint64_t rand_state;
+
   /*
    * PowApprox() - Approximate power function
    *
@@ -448,7 +448,7 @@ class Zipfian {
     } u = {a};
     u.x[1] = (int)((b - (double)e) * (double)(u.x[1] - 1072632447) + 1072632447.);
     u.x[0] = 0;
-  
+
     // exponentiation by squaring with the exponent's integer part
     // double r = u.d makes everything much slower, not sure why
     // TODO: use popcount?
@@ -458,10 +458,10 @@ class Zipfian {
       a *= a;
       e >>= 1;
     }
-  
+
     return r * u.d;
   }
-  
+
   /*
    * Zeta() - Computes zeta function
    */
@@ -470,15 +470,15 @@ class Zipfian {
       last_n = 0;
       last_sum = 0.;
     }
-    
+
     while (last_n < n) {
       last_sum += 1. / PowApprox((double)last_n + 1., theta);
       last_n++;
     }
-    
+
     return last_sum;
   }
-  
+
   /*
    * FastRandD() - Fast randum number generator that returns double
    *
@@ -489,7 +489,7 @@ class Zipfian {
     *state = (*state * 0x5deece66dUL + 0xbUL) & ((1UL << 48) - 1);
     return (double)*state / (double)((1UL << 48) - 1);
   }
- 
+
  public:
 
   /*
@@ -507,17 +507,17 @@ class Zipfian {
       fprintf(stderr, "theta in [1., 40.) is not supported\n");
       assert(false);
     }
-    
+
     assert(theta == -1. || (theta >= 0. && theta < 1.) || theta >= 40.);
     assert(rand_seed < (1UL << 48));
-    
+
     // This is ugly, but it is copied from C code, so let's preserve this
     memset(this, 0, sizeof(*this));
-    
+
     this->n = n;
     this->theta = theta;
-    
-    if (theta == -1.) { 
+
+    if (theta == -1.) {
       rand_seed = rand_seed % n;
     } else if (theta > 0. && theta < 1.) {
       this->alpha = 1. / (1. - theta);
@@ -526,14 +526,14 @@ class Zipfian {
       this->alpha = 0.;  // unused
       this->thres = 0.;  // unused
     }
-    
+
     this->last_n = 0;
     this->zetan = 0.;
     this->rand_state = rand_seed;
-    
+
     return;
   }
-  
+
   /*
    * ChangeN() - Changes the parameter n after initialization
    *
@@ -541,10 +541,10 @@ class Zipfian {
    */
   void ChangeN(uint64_t n) {
     this->n = n;
-    
+
     return;
   }
-  
+
   /*
    * Get() - Return the next number in the Zipfian distribution
    */
@@ -558,7 +558,7 @@ class Zipfian {
       this->last_n = this->n;
       this->dbl_n = (double)this->n;
     }
-  
+
     if (this->theta == -1.) {
       uint64_t v = this->rand_state;
       if (++this->rand_state >= this->n) this->rand_state = 0;
@@ -571,11 +571,11 @@ class Zipfian {
     } else {
       // from J. Gray et al. Quickly generating billion-record synthetic
       // databases. In SIGMOD, 1994.
-  
+
       // double u = erand48(this->rand_state);
       double u = FastRandD(&this->rand_state);
       double uz = u * this->zetan;
-      
+
       if(uz < 1.) {
         return 0UL;
       } else if(uz < this->thres) {
@@ -585,12 +585,12 @@ class Zipfian {
                           PowApprox(this->eta * (u - 1.) + 1., this->alpha));
       }
     }
-    
+
     // Should not reach here
     assert(false);
     return 0UL;
   }
-   
+
 };
 
 #ifdef NO_USE_PAPI
@@ -599,7 +599,7 @@ class Zipfian {
  * class CacheMeter - Placeholder for systems without PAPI
  */
 class CacheMeter {
- public: 
+ public:
   CacheMeter() {};
   CacheMeter(bool) {};
   ~CacheMeter() {}
@@ -615,7 +615,7 @@ class CacheMeter {
 
 // This requires adding PAPI library during compilation
 // The linking flag of PAPI is:
-//   -lpapi 
+//   -lpapi
 // To install PAPI under ubuntu please use the following command:
 //   sudo apt-get install libpapi-dev
 #include <papi.h>
@@ -627,7 +627,7 @@ class CacheMeter {
  * more comprehensive profiling purposes, only using a small feaction of its
  * functionalities available. Also, the applicability of this library is highly
  * platform dependent, so please check whether the platform is supported before
- * using  
+ * using
  */
 class CacheMeter {
  private:
@@ -635,21 +635,21 @@ class CacheMeter {
   int event_list[6] = {
     PAPI_LD_INS,       // Load instructions
     PAPI_L1_LDM,       // L1 load misses
-    
+
     PAPI_SR_INS,       // Store instructions
     PAPI_L1_STM,       // L1 store misses
-    
+
     PAPI_L3_TCA,       // L3 total cache access
     PAPI_L3_TCM,       // L3 total cache misses
   };
-  
-  // Use the length of the event_list to compute number of events we 
+
+  // Use the length of the event_list to compute number of events we
   // are counting
   static constexpr int EVENT_COUNT = sizeof(event_list) / sizeof(int);
-  
+
   // A list of results collected from the hardware performance counter
   long long counter_list[EVENT_COUNT];
-  
+
   // Use this to print out event names
   const char *event_name_list[EVENT_COUNT] = {
     "PAPI_LD_INS",
@@ -659,43 +659,43 @@ class CacheMeter {
     "PAPI_L3_TCA",
     "PAPI_L3_TCM",
   };
-  
+
   // The level of information we need to collect
   int level;
-  
+
   /*
    * CheckEvent() - Checks whether the event exists in this platform
    *
-   * This function wraps PAPI function in C++. Note that PAPI events are 
+   * This function wraps PAPI function in C++. Note that PAPI events are
    * declared using anonymous enum which is directly translated into int type
    */
   inline bool CheckEvent(int event) {
     int ret = PAPI_query_event(event);
     return ret == PAPI_OK;
   }
-  
+
   /*
    * CheckAllEvents() - Checks all events that this object is going to use
    *
-   * If the checking fails we just exit with error message indicating which one 
+   * If the checking fails we just exit with error message indicating which one
    * failed
    */
   void CheckAllEvents() {
-    // If any of the required events do not exist we just exit 
+    // If any of the required events do not exist we just exit
     for(int i = 0;i < level;i++) {
       if(CheckEvent(event_list[i]) == false) {
-        fprintf(stderr, 
-                "ERROR: PAPI event %s is not supported\n", 
-                event_name_list[i]); 
+        fprintf(stderr,
+                "ERROR: PAPI event %s is not supported\n",
+                event_name_list[i]);
         exit(1);
       }
     }
-    
+
     return;
   }
-  
+
  public:
-   
+
   /*
    * CacheMeter() - Initialize PAPI and events
    *
@@ -705,39 +705,39 @@ class CacheMeter {
   CacheMeter(bool start=false, int p_level=2) :
     level{p_level} {
     int ret = PAPI_library_init(PAPI_VER_CURRENT);
-    
+
     if (ret != PAPI_VER_CURRENT) {
       fprintf(stderr, "ERROR: PAPI library failed to initialize\n");
       exit(1);
     }
-    
+
     // Initialize pthread support
     ret = PAPI_thread_init(pthread_self);
     if(ret != PAPI_OK) {
       fprintf(stderr, "ERROR: PAPI library failed to initialize for pthread\n");
       exit(1);
     }
-    
+    // printf("before CheckAllEvents\n");
     // If this does not pass just exit
-    CheckAllEvents(); 
-    
+    CheckAllEvents();
+    printf("Cachemeter setting done before calling start\n");
     // If we want to start the counter immediately just test this flag
     if(start == true) {
       Start();
     }
-    
+
     return;
   }
-  
+
   /*
    * Destructor
    */
   ~CacheMeter() {
     PAPI_shutdown();
-    
-    return; 
+
+    return;
   }
-  
+
   /*
    * Start() - Starts the counter until Stop() is called
    *
@@ -747,16 +747,16 @@ class CacheMeter {
     int ret = PAPI_start_counters(event_list, level);
     // Start counters
     if (ret != PAPI_OK) {
-      fprintf(stderr, 
+      fprintf(stderr,
               "ERROR: Failed to start counters using"
               " PAPI_start_counters() (%d)\n",
-              ret);  
+              ret);
       exit(1);
     }
-    
+
     return;
   }
-  
+
   /*
    * Stop() - Stops all counters, and dump their values inside the local array
    *
@@ -766,29 +766,29 @@ class CacheMeter {
   void Stop() {
     // Use counter list to hold counters
     if (PAPI_stop_counters(counter_list, level) != PAPI_OK) {
-      fprintf(stderr, 
-              "ERROR: Failed to start counters using PAPI_stop_counters()\n");  
+      fprintf(stderr,
+              "ERROR: Failed to start counters using PAPI_stop_counters()\n");
       exit(1);
     }
-    
+
     // Store zero to all unused counters
     for(int i = level;i < EVENT_COUNT;i++) {
       counter_list[i] = 0LL;
     }
-    
+
     return;
   }
-  
+
   /*
    * GetL3CacheUtilization() - Returns L3 total cache accesses and misses
    *
-   * These two values are returned in a tuple, the first element of which being 
+   * These two values are returned in a tuple, the first element of which being
    * total cache accesses and the second element being L3 cache misses
    */
   std::pair<long long, long long> GetL3CacheUtilization() {
     return std::make_pair(counter_list[4], counter_list[5]);
   }
-  
+
   /*
    * GetL1CacheUtilization() - Returns L1 cache utilizations
    */
@@ -796,36 +796,36 @@ class CacheMeter {
     return std::make_pair(counter_list[0] + counter_list[2],
                           counter_list[1] + counter_list[3]);
   }
-  
+
   /*
    * PrintL3CacheUtilization() - Prints L3 cache utilization
    */
   void PrintL3CacheUtilization() {
     // Return L3 total accesses and cache misses
     auto l3_util = GetL3CacheUtilization();
-    
+
     std::cout << "    L3 total = " << l3_util.first << "; miss = " \
               << l3_util.second << "; hit ratio = " \
               << static_cast<double>(l3_util.first - l3_util.second) / \
                  static_cast<double>(l3_util.first) \
               << std::endl;
-              
+
     return;
   }
-  
+
   /*
    * PrintL1CacheUtilization() - Prints L1 cache utilization
    */
   void PrintL1CacheUtilization() {
     // Return L3 total accesses and cache misses
     auto l1_util = GetL1CacheUtilization();
-    
+
     std::cout << "    LOAD/STORE total = " << l1_util.first << "; miss = " \
               << l1_util.second << "; hit ratio = " \
               << static_cast<double>(l1_util.first - l1_util.second) / \
                  static_cast<double>(l1_util.first) \
               << std::endl;
-              
+
     return;
   }
 };
@@ -833,7 +833,7 @@ class CacheMeter {
 #endif
 
 /*
- * class Permutation - Generates permutation of k numbers, ranging from 
+ * class Permutation - Generates permutation of k numbers, ranging from
  *                     0 to k - 1
  *
  * This is usually used to randomize insert() to a data structure such that
@@ -841,62 +841,62 @@ class CacheMeter {
  *   (2) There is no extra overhead for failed insertion because all keys are
  *       unique
  */
-template <typename IntType> 
+template <typename IntType>
 class Permutation {
  private:
   std::vector<IntType> data;
-  
+
  public:
-  
+
   /*
    * Generate() - Generates a permutation and store them inside data
    */
   void Generate(size_t count, IntType start=IntType{0}) {
     // Extend data vector to fill it with elements
-    data.resize(count);  
+    data.resize(count);
 
     // This function fills the vector with IntType ranging from
     // start to start + count - 1
     std::iota(data.begin(), data.end(), start);
-    
+
     // The two arguments define a closed interval, NOT open interval
     Random<IntType> rand{0, static_cast<IntType>(count) - 1};
-    
+
     // Then swap all elements with a random position
     for(size_t i = 0;i < count;i++) {
       IntType random_key = rand();
-      
+
       // Swap two numbers
       std::swap(data[i], data[random_key]);
     }
-    
+
     return;
   }
-   
+
   /*
    * Constructor
    */
   Permutation() {}
-  
+
   /*
    * Constructor - Starts the generation process
    */
   Permutation(size_t count, IntType start=IntType{0}) {
     Generate(count, start);
-    
+
     return;
   }
-  
+
   /*
    * operator[] - Accesses random elements
    *
    * Note that return type is reference type, so element could be
-   * modified using this method 
+   * modified using this method
    */
   inline IntType &operator[](size_t index) {
     return data[index];
   }
-  
+
   inline const IntType &operator[](size_t index) const {
     return data[index];
   }
@@ -963,37 +963,37 @@ void BenchmarkBwTreeRandRead(TreeType *t, int key_num, int thread_num);
 void BenchmarkBwTreeZipfRead(TreeType *t, int key_num, int thread_num);
 
 // Benchmark for stx::btree
-void BenchmarkBTreeSeqInsert(BTreeType *t, 
-                             int key_num, 
+void BenchmarkBTreeSeqInsert(BTreeType *t,
+                             int key_num,
                              int num_thread);
-void BenchmarkBTreeSeqRead(BTreeType *t, 
+void BenchmarkBTreeSeqRead(BTreeType *t,
                            int key_num,
                            int num_thread);
-void BenchmarkBTreeRandRead(BTreeType *t, 
+void BenchmarkBTreeRandRead(BTreeType *t,
                             int key_num,
                             int num_thread);
-void BenchmarkBTreeRandLocklessRead(BTreeType *t, 
+void BenchmarkBTreeRandLocklessRead(BTreeType *t,
                                     int key_num,
                                     int num_thread);
-void BenchmarkBTreeZipfRead(BTreeType *t, 
+void BenchmarkBTreeZipfRead(BTreeType *t,
                             int key_num,
                             int num_thread);
-void BenchmarkBTreeZipfLockLessRead(BTreeType *t, 
+void BenchmarkBTreeZipfLockLessRead(BTreeType *t,
                                     int key_num,
                                     int num_thread);
 
-// Benchmark for ART              
-void BenchmarkARTSeqInsert(ARTType *t, 
-                           int key_num, 
+// Benchmark for ART
+void BenchmarkARTSeqInsert(ARTType *t,
+                           int key_num,
                            int num_thread,
                            long int *array);
-void BenchmarkARTSeqRead(ARTType *t, 
+void BenchmarkARTSeqRead(ARTType *t,
                          int key_num,
                          int num_thread);
-void BenchmarkARTRandRead(ARTType *t, 
+void BenchmarkARTRandRead(ARTType *t,
                           int key_num,
                           int num_thread);
-void BenchmarkARTZipfRead(ARTType *t, 
+void BenchmarkARTZipfRead(ARTType *t,
                           int key_num,
                           int num_thread);
 
@@ -1026,4 +1026,52 @@ void RandomInsertVerify(TreeType *t);
  * Misc test suite
  */
 void TestEpochManager(TreeType *t);
+
+/* added */
+
+template <typename Fn, typename... Args>
+void ParallelTest(TreeType *tree_p,
+                  uint64_t num_threads,
+                  Fn &&fn,
+                  Args &&...args) {
+  std::vector<std::thread> thread_group;
+
+  if(tree_p != nullptr) {
+    // Update the GC array
+    tree_p->UpdateThreadLocal(num_threads);
+  }
+
+  auto fn2 = [tree_p, &fn](uint64_t thread_id, Args ...args) {
+    if(tree_p != nullptr) {
+      tree_p->AssignGCID(thread_id);
+    }
+
+    fn(thread_id, args...);
+
+    if(tree_p != nullptr) {
+      // Make sure it does not stand on the way of other threads
+      tree_p->UnregisterThread(thread_id);
+    }
+
+    return;
+  };
+
+  // Launch a group of threads
+  for (uint64_t thread_itr = 0; thread_itr < num_threads; ++thread_itr) {
+    thread_group.push_back(std::thread{fn2, thread_itr, std::ref(args...)});
+  }
+
+  // Join the threads with the main thread
+  for (uint64_t thread_itr = 0; thread_itr < num_threads; ++thread_itr) {
+    thread_group[thread_itr].join();
+  }
+
+  // Restore to single thread mode after all threads have finished
+  if(tree_p != nullptr) {
+    tree_p->UpdateThreadLocal(1);
+  }
+
+  return;
+}
+void BenchmarkRandOperation(int total_operation, int thread_num);
 
