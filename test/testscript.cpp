@@ -73,3 +73,113 @@ void BenchmarkRandOperation(int total_operation, int thread_num) {
 
   return;
 }
+
+void TestBwTreeUpdatePerformance(int key_num) {
+  TreeType *t = GetEmptyTree(true);
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+
+  start = std::chrono::system_clock::now();
+  printf("~~~~~~~~test running~~~~~~\n");
+  for(int i = 0;i < key_num;i++) {
+    t->Insert(i, i);
+  }
+
+  end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed_seconds = end - start;
+
+  std::cout << "BwTree: " << (key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
+            << " million insertion/sec" << "\n";
+
+  // Then test read performance
+  int iter = 10;
+  std::vector<long> v{};
+
+  v.reserve(100);
+
+  start = std::chrono::system_clock::now();
+
+  for(int j = 0;j < iter;j++) {
+    for(int i = 0;i < key_num;i++) {
+      t->GetValue(i, v);
+
+      v.clear();
+    }
+  }
+
+  end = std::chrono::system_clock::now();
+
+  elapsed_seconds = end - start;
+  std::cout << "BwTree: " << (iter * key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
+            << " million read/sec" << "\n";
+
+  ///////////////////////////////////////////////////////////////////
+  // Update Inserted Key-Value Pair
+  ///////////////////////////////////////////////////////////////////
+
+  bool succeed;
+  start = std::chrono::system_clock::now();
+
+  for(int i = key_num - 1;i >= 0;i--) {
+    succeed = t->Update(i, i, i + 1);
+  }
+
+  end = std::chrono::system_clock::now();
+
+  elapsed_seconds = end - start;
+
+  std::cout << "BwTree: " << (key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
+            << " million Update (reverse order)/sec" << "\n";
+
+  // Read again
+  start = std::chrono::system_clock::now();
+
+  for(int j = 0;j < iter;j++) {
+    for(int i = 0;i < key_num;i++) {
+      t->GetValue(i, v);
+      auto it = std::find(v.begin(), v.end(), i+1);
+      v.clear();
+    }
+  }
+
+  end = std::chrono::system_clock::now();
+
+  elapsed_seconds = end - start;
+  std::cout << "BwTree: " << (iter * key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
+            << " million updated read (2 values)/sec" << "\n";
+
+  // Verify updates
+  for(int i = 0;i < key_num;i++) {
+    t->GetValue(i, v);
+
+    assert(v.size() == 1);
+    assert(v[0] == i + 1);
+
+    v.clear();
+  }
+
+  std::cout << "    All values are correct!\n";
+
+  // Finally remove values
+
+  start = std::chrono::system_clock::now();
+
+  for(int i = 0;i < key_num;i++) {
+    t->Delete(i, i + 1);
+  }
+  end = std::chrono::system_clock::now();
+
+  elapsed_seconds = end - start;
+  std::cout << "BwTree: " << (key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
+            << " million remove/sec" << "\n";
+
+  for(int i = 0;i < key_num;i++) {
+    t->GetValue(i, v);
+
+    assert(v.size() == 0);
+  }
+
+  std::cout << "    All values have been removed!\n";
+
+  return;
+}
