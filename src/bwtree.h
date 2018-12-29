@@ -7460,6 +7460,7 @@ before_switch:
     /* update will be performed iff old value is exist and new value is not.*/
     if (itOldVal != v.end() && itNewVal == v.end()) {
       while(1) {// delete key-oldValue pair
+        Context context{key};
         std::pair<int, bool> index_pair;
 
         // Navigate leaf nodes to check whether the key-value
