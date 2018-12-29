@@ -6,12 +6,12 @@
  * Assume that insert_ratio + delete_ration == 10
 */
 void BenchmarkRandOperation(int total_operation, int thread_num) {
-  // Get an empty trrr; do not print its construction message
+  // Get an empty tree; do not print its construction message
   TreeType *t = GetEmptyTree(true);
 
   // This is used to record time taken for each individual thread
   double thread_time[thread_num];
-  for(int i = 0;i < thread_num;i++) {
+  for(int i = 0; i < thread_num; i++) {
     thread_time[i] = 0.0;
   }
 
@@ -20,7 +20,7 @@ void BenchmarkRandOperation(int total_operation, int thread_num) {
     std::string fName = "tmp" + std::to_string(thread_id) + ".txt";
     std::ifstream fin(fName);
     std::string operation;
-    long int key;
+    long int key, prev_key;
     long int ins_cnt = 0, del_cnt = 0, failed_del_cnt = 0;
     std::vector<long int> tmpVec;
     // Declare timer and start it immediately
