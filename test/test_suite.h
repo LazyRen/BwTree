@@ -1074,4 +1074,5 @@ void ParallelTest(TreeType *tree_p,
   return;
 }
 void BenchmarkRandOperation(int total_operation, int thread_num);
+void TestBwTreeUpdatePerformance(int key_num);
 
