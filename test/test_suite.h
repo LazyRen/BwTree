@@ -720,6 +720,7 @@ class CacheMeter {
 
     // If this does not pass just exit
     CheckAllEvents();
+    printf("Cachemeter setting done before calling start\n");
 
     // If we want to start the counter immediately just test this flag
     if(start == true) {
@@ -1035,3 +1036,52 @@ extern int skew_test_max_key;
 void UniformTest(uint64_t thread_id, TreeType *t);
 void MakeBasicTree(TreeType *t);
 void SkewTest(TreeType *t);
+
+/* added */
+
+template <typename Fn, typename... Args>
+void ParallelTest(TreeType *tree_p,
+                  uint64_t num_threads,
+                  Fn &&fn,
+                  Args &&...args) {
+  std::vector<std::thread> thread_group;
+
+  if(tree_p != nullptr) {
+    // Update the GC array
+    tree_p->UpdateThreadLocal(num_threads);
+  }
+
+  auto fn2 = [tree_p, &fn](uint64_t thread_id, Args ...args) {
+    if(tree_p != nullptr) {
+      tree_p->AssignGCID(thread_id);
+    }
+
+    fn(thread_id, args...);
+
+    if(tree_p != nullptr) {
+      // Make sure it does not stand on the way of other threads
+      tree_p->UnregisterThread(thread_id);
+    }
+
+    return;
+  };
+
+  // Launch a group of threads
+  for (uint64_t thread_itr = 0; thread_itr < num_threads; ++thread_itr) {
+    thread_group.push_back(std::thread{fn2, thread_itr, std::ref(args...)});
+  }
+
+  // Join the threads with the main thread
+  for (uint64_t thread_itr = 0; thread_itr < num_threads; ++thread_itr) {
+    thread_group[thread_itr].join();
+  }
+
+  // Restore to single thread mode after all threads have finished
+  if(tree_p != nullptr) {
+    tree_p->UpdateThreadLocal(1);
+  }
+
+  return;
+}
+void BenchmarkRandOperation(int total_operation, int thread_num);
+void TestBwTreeUpdatePerformance(int key_num);

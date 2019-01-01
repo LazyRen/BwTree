@@ -2,7 +2,7 @@
 /*
  * performance_test.cpp
  *
- * This includes performance test for index structures such as std::map, 
+ * This includes performance test for index structures such as std::map,
  * std::unordered_map, stx::btree and stx::btree_multimap
  */
 
@@ -252,7 +252,7 @@ void TestCuckooHashTableInsertReadPerformance(int key_num) {
     // Read 1 million keys from stx::btree
     for(int i = 0;i < key_num;i++) {
       long int ret;
-      
+
       test_map.find(i, ret);
 
       v.push_back(ret);
@@ -286,7 +286,7 @@ void TestCuckooHashTableInsertReadPerformance(int key_num) {
 void TestBwTreeInsertReadDeletePerformance(TreeType *t, int key_num) {
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
-
+  printf("~~~~~~~~test running~~~~~~\n");
   for(int i = 0;i < key_num;i++) {
     t->Insert(i, i);
   }
@@ -323,7 +323,7 @@ void TestBwTreeInsertReadDeletePerformance(TreeType *t, int key_num) {
   ///////////////////////////////////////////////////////////////////
   // Test Iterator (forward, single value)
   ///////////////////////////////////////////////////////////////////
-  
+
   start = std::chrono::system_clock::now();
   {
     for(int j = 0;j < iter;j++) {
@@ -334,11 +334,11 @@ void TestBwTreeInsertReadDeletePerformance(TreeType *t, int key_num) {
         v.clear();
         it++;
       }
-      
+
       it--;
       if(it->first != key_num - 1) {
         throw "Error: Forward iterating does not reach the end";
-      } 
+      }
     }
 
     end = std::chrono::system_clock::now();
@@ -347,11 +347,11 @@ void TestBwTreeInsertReadDeletePerformance(TreeType *t, int key_num) {
     std::cout << "BwTree: " << (iter * key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
               << " million forward iteration/sec" << "\n";
   }
-  
+
   ///////////////////////////////////////////////////////////////////
   // Test Iterator (backward, single value)
   ///////////////////////////////////////////////////////////////////
-  
+
   start = std::chrono::system_clock::now();
   {
     for(int j = 0;j < iter;j++) {
@@ -362,24 +362,24 @@ void TestBwTreeInsertReadDeletePerformance(TreeType *t, int key_num) {
         v.clear();
         it--;
       }
-      
+
       it++;
       if(it->first != 0) {
         throw "Error: Forward iterating does not reach the beginning";
-      } 
+      }
     }
-    
+
     end = std::chrono::system_clock::now();
 
     elapsed_seconds = end - start;
     std::cout << "BwTree: " << (iter * key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
               << " million backward iteration/sec" << "\n";
   }
-  
+
   ///////////////////////////////////////////////////////////////////
   // Insert 2nd value
   ///////////////////////////////////////////////////////////////////
-  
+
   start = std::chrono::system_clock::now();
 
   for(int i = key_num - 1;i >= 0;i--) {
@@ -513,34 +513,34 @@ void TestBwTreeInsertReadPerformance(TreeType *t, int key_num) {
 void TestBwTreeEmailInsertPerformance(BwTree<std::string, long int> *t,
                                       std::string filename) {
   std::ifstream email_file{filename};
-  
+
   std::vector<std::string> string_list{};
-  
+
   // If unable to open file
   if(email_file.good() == false) {
     std::cout << "Unable to open file: " << filename << std::endl;
-    
+
     return;
   }
-  
+
   int counter = 0;
   std::string s{};
-  
+
   // Then load the line until reaches EOF
   while(std::getline(email_file, s).good() == true) {
     string_list.push_back(s);
-    
+
     counter++;
   }
-    
+
   printf("Successfully loaded %d entries\n", counter);
-  
+
   ///////////////////////////////////////////////////////////////////
   // After this point we continue with insertion
   ///////////////////////////////////////////////////////////////////
-  
+
   int key_num = counter;
-  
+
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
 
@@ -554,11 +554,11 @@ void TestBwTreeEmailInsertPerformance(BwTree<std::string, long int> *t,
 
   std::cout << "BwTree: " << (key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
             << " million email insertion/sec" << "\n";
-            
+
   print_flag = true;
   delete t;
   print_flag = false;
-            
+
   ///////////////////////////////////////////////////////////////////
   // Then test stx::btree_multimap
   ///////////////////////////////////////////////////////////////////
@@ -577,6 +577,6 @@ void TestBwTreeEmailInsertPerformance(BwTree<std::string, long int> *t,
 
   std::cout << "stx::btree_multimap: " << (key_num / (1024.0 * 1024.0)) / elapsed_seconds.count()
             << " million email insertion/sec" << "\n";
-            
+
   return;
 }

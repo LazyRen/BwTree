@@ -6,15 +6,15 @@
  *
  * By default 40 threads are used
  */
-uint64_t GetThreadNum() {    
+uint64_t GetThreadNum() {
     uint64_t thread_num = 40;
     bool ret = Envp::GetValueAsUL("THREAD_NUM", &thread_num);
     if(ret == false) {
-      throw "THREAD_NUM must be an unsigned ineteger!"; 
+      throw "THREAD_NUM must be an unsigned ineteger!";
     } else {
-      printf("Using thread_num = %lu\n", thread_num); 
+      printf("Using thread_num = %lu\n", thread_num);
     }
-    
+
     return thread_num;
 }
 
@@ -30,9 +30,11 @@ int main(int argc, char **argv) {
   bool run_infinite_insert_test = false;
   bool run_email_test = false;
   bool run_mixed_test = false;
+  bool run_rand_operation = false;
   bool run_skew_test = false;
 
   int opt_index = 1;
+  int rand_idx;
   while(opt_index < argc) {
     char *opt_p = argv[opt_index];
 
@@ -58,6 +60,11 @@ int main(int argc, char **argv) {
       run_email_test = true;
     } else if(strcmp(opt_p, "--mixed-test") == 0) {
       run_mixed_test = true;
+    } else if(strcmp(opt_p, "--rand_operation") == 0) {
+      run_rand_operation = true;
+      rand_idx = opt_index;
+      opt_index += 3;
+      continue;
     } else if(strcmp(opt_p, "--skew-test") == 0){
       run_skew_test = true;
     } else {
@@ -87,7 +94,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////////////
 
   TreeType *t1 = nullptr;
-  
+
   if(run_mixed_test == true) {
     t1 = GetEmptyTree();
 
@@ -101,12 +108,12 @@ int main(int argc, char **argv) {
 
     DestroyTree(t1);
   }
-  
+
   if(run_email_test == true) {
     auto t2 = new BwTree<std::string, long int>{true};
-    
+
     TestBwTreeEmailInsertPerformance(t2, "emails_dump.txt");
-    
+
     // t2 has already been deleted for memory reason
   }
 
@@ -117,52 +124,52 @@ int main(int argc, char **argv) {
 
     DestroyTree(t1);
   }
-  
+
   if(run_benchmark_art_full == true) {
     ARTType t;
     art_tree_init(&t);
-    
-    int key_num = 30 * 1024 * 1024;  
+
+    int key_num = 30 * 1024 * 1024;
     uint64_t thread_num = 1;
-    
-    printf("Initializing ART's external data array of size = %f MB\n", 
+
+    printf("Initializing ART's external data array of size = %f MB\n",
            sizeof(long int) * key_num / 1024.0 / 1024.0);
-    
+
     // This is the array for storing ART's data
     // Sequential access of the array is fast through ART
     long int *array = new long int[key_num];
     for(int i = 0;i < key_num;i++) {
-      array[i] = i; 
+      array[i] = i;
     }
-    
+
     BenchmarkARTSeqInsert(&t, key_num, (int)thread_num, array);
     BenchmarkARTSeqRead(&t, key_num, (int)thread_num);
-    BenchmarkARTRandRead(&t, key_num, (int)thread_num);    
+    BenchmarkARTRandRead(&t, key_num, (int)thread_num);
     BenchmarkARTZipfRead(&t, key_num, (int)thread_num);
-    
+
     delete[] array;
   }
 
   if(run_benchmark_btree_full == true) {
     BTreeType *t = GetEmptyBTree();
     int key_num = 30 * 1024 * 1024;
-    
+
     printf("Using key size = %d (%f million)\n",
            key_num,
            key_num / (1024.0 * 1024.0));
-    
+
     uint64_t thread_num = GetThreadNum();
-    
+
     BenchmarkBTreeSeqInsert(t, key_num, (int)thread_num);
-    
+
     // Let this go before any of the other
     BenchmarkBTreeRandLocklessRead(t, key_num, (int)thread_num);
     BenchmarkBTreeZipfLockLessRead(t, key_num, (int)thread_num);
-    
+
     BenchmarkBTreeSeqRead(t, key_num, (int)thread_num);
-    BenchmarkBTreeRandRead(t, key_num, (int)thread_num);    
+    BenchmarkBTreeRandRead(t, key_num, (int)thread_num);
     BenchmarkBTreeZipfRead(t, key_num, (int)thread_num);
-    
+
     DestroyBTree(t);
   }
 
@@ -179,7 +186,7 @@ int main(int argc, char **argv) {
     printf("Using key size = %d (%f million)\n",
            key_num,
            key_num / (1024.0 * 1024.0));
-    
+
     uint64_t thread_num = GetThreadNum();
 
     if(run_benchmark_bwtree_full == true) {
@@ -197,28 +204,28 @@ int main(int argc, char **argv) {
       // This function will delete all keys at the end, so the tree
       // is empty after it returns
       TestBwTreeInsertReadDeletePerformance(t1, key_num);
-      
+
       DestroyTree(t1, true);
       t1 = GetEmptyTree(true);
-      
+
       // Tests random insert using one thread
       RandomInsertSpeedTest(t1, key_num);
-      
+
       DestroyTree(t1, true);
       t1 = GetEmptyTree(true);
-      
+
       // Test random insert seq read
       RandomInsertSeqReadSpeedTest(t1, key_num);
-      
+
       DestroyTree(t1, true);
       t1 = GetEmptyTree(true);
-      
+
       // Test seq insert random read
       SeqInsertRandomReadSpeedTest(t1, key_num);
-      
+
       // Use stree_multimap as a reference
       RandomBtreeMultimapInsertSpeedTest(key_num);
-      
+
       // Use cuckoohash_map
       RandomCuckooHashMapInsertSpeedTest(key_num);
     }
@@ -249,7 +256,7 @@ int main(int argc, char **argv) {
     /////////////////////////////////////////////////////////////////
     // Test iterator
     /////////////////////////////////////////////////////////////////
-    
+
     // This could print
     t1 = GetEmptyTree();
 
@@ -262,11 +269,11 @@ int main(int argc, char **argv) {
 
     ForwardIteratorTest(t1, key_num);
     BackwardIteratorTest(t1, key_num);
-    
+
     PrintStat(t1);
 
     printf("Finised testing iterator\n");
-    
+
     // Do not forget to deletet the tree here
     DestroyTree(t1, true);
 
@@ -281,16 +288,16 @@ int main(int argc, char **argv) {
 
     LaunchParallelTestID(t1, 8, RandomInsertTest, t1);
     RandomInsertVerify(t1);
-    
+
     printf("Finished random insert testing. Delete the tree.\n");
-    
+
     // no print
     DestroyTree(t1, true);
 
     /////////////////////////////////////////////////////////////////
     // Test mixed insert/delete
     /////////////////////////////////////////////////////////////////
-    
+
     // no print
     t1 = GetEmptyTree(true);
 
@@ -300,7 +307,7 @@ int main(int argc, char **argv) {
     PrintStat(t1);
 
     MixedGetValueTest(t1);
-    
+
     /////////////////////////////////////////////////////////////////
     // Test Basic Insert/Delete/GetValue
     //   with different patterns and multi thread
@@ -372,7 +379,7 @@ int main(int argc, char **argv) {
 
     DestroyTree(t1);
   }
-  
+
   if(run_infinite_insert_test == true) {
     t1 = GetEmptyTree();
 
@@ -387,6 +394,14 @@ int main(int argc, char **argv) {
     LaunchParallelTestID(t1, 8, StressTest, t1);
 
     DestroyTree(t1);
+
+  if (run_rand_operation) {
+    // printf("usage\n");
+    // printf("[fileName] [number of instructions] [number of threads]\n");
+    // BenchmarkRandOperation(int total_operation, int thread_num, int insert_ratio, int delete_ratio)
+    std::string instruction_num(argv[rand_idx+1]);
+    std::string thread_num(argv[rand_idx+2]);
+    BenchmarkRandOperation(std::stoi(instruction_num), std::stoi(thread_num));
   }
 
   if(run_skew_test == true) {
