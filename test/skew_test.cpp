@@ -1,6 +1,4 @@
 #include "test_suite.h"
-
-
 using namespace std;
 
 int skew_test_thread_num = 8;

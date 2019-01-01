@@ -394,8 +394,9 @@ int main(int argc, char **argv) {
     LaunchParallelTestID(t1, 8, StressTest, t1);
 
     DestroyTree(t1);
+  }
 
-  if (run_rand_operation) {
+  if (run_rand_operation == true) {
     // printf("usage\n");
     // printf("[fileName] [number of instructions] [number of threads]\n");
     // BenchmarkRandOperation(int total_operation, int thread_num, int insert_ratio, int delete_ratio)
@@ -414,4 +415,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
