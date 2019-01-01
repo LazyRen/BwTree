@@ -38,7 +38,7 @@ main
 *.txt
 *.doc
 *.swp
-./test/create_input
+test/create_input
 
 *.gcov
 
