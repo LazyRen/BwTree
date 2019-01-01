@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
   bool run_infinite_insert_test = false;
   bool run_email_test = false;
   bool run_mixed_test = false;
+  bool run_skew_test = false;
 
   int opt_index = 1;
   while(opt_index < argc) {
@@ -57,6 +58,8 @@ int main(int argc, char **argv) {
       run_email_test = true;
     } else if(strcmp(opt_p, "--mixed-test") == 0) {
       run_mixed_test = true;
+    } else if(strcmp(opt_p, "--skew-test") == 0){
+      run_skew_test = true;
     } else {
       printf("ERROR: Unknown option: %s\n", opt_p);
 
@@ -76,6 +79,7 @@ int main(int argc, char **argv) {
   bwt_printf("RUN_INFINITE_INSERT_TEST = %d\n", run_infinite_insert_test);
   bwt_printf("RUN_EMAIL_TEST = %d\n", run_email_test);
   bwt_printf("RUN_MIXED_TEST = %d\n", run_mixed_test);
+  bwt_printf("RUN_SKEW_TEST = %d\n", run_skew_test);
   bwt_printf("======================================\n");
 
   //////////////////////////////////////////////////////
@@ -382,6 +386,14 @@ int main(int argc, char **argv) {
 
     LaunchParallelTestID(t1, 8, StressTest, t1);
 
+    DestroyTree(t1);
+  }
+
+  if(run_skew_test == true) {
+    t1 = GetEmptyTree();
+    MakeBasicTree(t1);
+    LaunchParallelTestID(t1, skew_test_thread_num, UniformTest, t1);
+    SkewTest(t1);
     DestroyTree(t1);
   }
 
