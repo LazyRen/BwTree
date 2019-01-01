@@ -5,7 +5,7 @@ int skew_test_thread_num = 8;
 int skew_test_max_key = 1000000;
 
 void MakeBasicTree(TreeType *t){
-	for(int i = 0; i < skew_test_max_key; i++){
+	for(long int i = 0; i < skew_test_max_key; i++){
 		t->Insert(i, i);
 	}
 	return;
@@ -14,30 +14,33 @@ void MakeBasicTree(TreeType *t){
 void UniformTest(uint64_t thread_id, TreeType *t){
   std::random_device r{};
   std::default_random_engine e1(r());
-  std::uniform_int_distribution<int> uniform_dist(0, skew_test_max_key - 1);
+  SimpleInt64Random<0, skew_test_max_key - 1> h{};
+  std::vector<long int> updated;
+  updated.reserve(1000);
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
 
   start = std::chrono::system_clock::now();
 
   for(size_t i = 0;i < ((size_t)skew_test_max_key/skew_test_thread_num);i++) {
-    int key = uniform_dist(e1);
-    
-    t->Update(key, key);
+    long int key = (long int)h((uint64_t)i, thread_id);
+
+    updated.push_back(key);
+    t->Update(key, key, key+1);
   }
 
   end = std::chrono::system_clock::now();
 
   std::chrono::duration<double> elapsed_seconds = end - start;
 
-    // Measure the overhead
+  // Measure the overhead
   std::vector<long int> v{};
-  v.reserve(100);
+  v.reserve(1000);
 
   start = std::chrono::system_clock::now();
 
   for(size_t i = 0;i < ((size_t)skew_test_max_key/skew_test_thread_num);i++) {
-    int key = uniform_dist(e1);
+    long int key = (long int)h((uint64_t)i, thread_id);
 
     v.push_back(key);
 
@@ -52,6 +55,20 @@ void UniformTest(uint64_t thread_id, TreeType *t){
             << " random update/sec" << "\n";
 
   std::cout << "    Overhead = " << overhead.count() << " seconds" << std::endl;
+
+  std:cout << "Check Correctness of UniformTest\n"
+
+  for (auto it : updated) {
+    t->GetValue(it, v);
+
+    assert(v.size() == 1);
+    assert(v[0] == i + 1);
+
+    v.clear();
+  }
+
+  std::cout << "    All values are correct!\n";
+
   return;
 }
 
@@ -59,34 +76,34 @@ void SkewTest(TreeType *t) {
   const int num_thread = skew_test_thread_num;
   const int key_num = skew_test_max_key;
   int iter = 1;
-  
+
   // This is used to record time taken for each individual thread
   double thread_time[num_thread];
   for(int i = 0;i < num_thread;i++) {
     thread_time[i] = 0.0;
   }
-  
+
   // Generate zipfian distribution into this list
   std::vector<long> zipfian_key_list{};
   zipfian_key_list.reserve(key_num);
-  
+
   // Initialize it with time() as the random seed
   Zipfian zipf{(uint64_t)key_num, 0.99, (uint64_t)time(NULL)};
-  
-  // Populate the array with random numbers 
+
+  // Populate the array with random numbers
   for(int i = 0;i < key_num;i++) {
-    zipfian_key_list.push_back(zipf.Get()); 
+    zipfian_key_list.push_back(zipf.Get());
   }
-  
-  auto func2 = [key_num, 
-                iter, 
+
+  auto func2 = [key_num,
+                iter,
                 &thread_time,
                 &zipfian_key_list,
                 num_thread](uint64_t thread_id, TreeType *t) {
     // This is the start and end index we read into the zipfian array
     long int start_index = key_num / num_thread * (long)thread_id;
     long int end_index = start_index + key_num / num_thread;
-    
+
     std::vector<long> v{};
 
     v.reserve(1);
@@ -106,13 +123,13 @@ void SkewTest(TreeType *t) {
 
     cache.Stop();
     double duration = timer.Stop();
-    
+
     thread_time[thread_id] = duration;
 
     std::cout << "[Thread " << thread_id << " Done] @ " \
               << (iter * (end_index - start_index) / (1024.0 * 1024.0)) / duration \
               << " million read (zipfian)/sec" << "\n";
-    
+
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
 
