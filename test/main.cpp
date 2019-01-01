@@ -410,25 +410,25 @@ int main(int argc, char **argv) {
   }
 
   if (run_uniform_update) {
-    t1 = GetEmptyTree();
+    t1 = GetEmptyTree(true);
     printf("Creating Basic Tree\n");
     MakeBasicTree(t1);
     printf("\nUniform Update Test Start\n");
     // LaunchParallelTestID(t1, skew_test_thread_num, UniformTest, t1);
     DistributeUpdateTest(t1, 0, skew_test_max_key);
     printf("Uniform Update Test Done\n\n");
-    DestroyTree(t1);
+    DestroyTree(t1, true);
   }
 
   if (run_skew_update == true) {
-    t1 = GetEmptyTree();
+    t1 = GetEmptyTree(true);
     printf("Creating Basic Tree\n");
     MakeBasicTree(t1);
     printf("\nSkew Update Test Start\n");
     // SkewTest(t1);
     DistributeUpdateTest(t1, skew_test_max_key/2, skew_test_max_key/2 + skew_test_max_key/16);
     printf("Skew Update Test Done\n\n");
-    DestroyTree(t1);
+    DestroyTree(t1, true);
   }
 
   return 0;

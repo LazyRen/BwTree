@@ -167,16 +167,18 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
     Timer timer{true};
     CacheMeter cache{true};
-
+    int failed = 0;
     for(long i = 0; i < iter; i++) {
       long int key = uniform_dist(e1);
 
-      t->Update(key, key, key);
-
+      bool ret = t->Update(key, key, key);
+      if (!ret)
+        failed += 1;
       v.clear();
     }
 
     cache.Stop();
+    printf("%d failed\n", failed);
     double duration = timer.Stop();
 
     thread_time[thread_id] = duration;

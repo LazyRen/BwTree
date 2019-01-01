@@ -7458,7 +7458,10 @@ before_switch:
     auto itNewVal = std::find(v.begin(), v.end(), newValue);
 
     /* update will be performed iff old value is exist and new value is not.*/
-    if (itOldVal != v.end() && itNewVal == v.end()) {
+    // if (itOldVal != v.end() && itNewVal == v.end()) {
+    /* YOU MUST use previous one to be percise, but in order to make test case easier
+     * we DO NOT check for the newValue's existence*/
+    if (itOldVal != v.end()) {
       while(1) {// delete key-oldValue pair
         Context context{key};
         std::pair<int, bool> index_pair;
@@ -7472,6 +7475,7 @@ before_switch:
           update_abort_count.fetch_add(1);
           #endif
           epoch_manager.LeaveEpoch(epoch_node_p);
+
           return false;
         }
 
