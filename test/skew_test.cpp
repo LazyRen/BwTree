@@ -4,7 +4,7 @@
 using namespace std;
 
 int skew_test_thread_num = 8;
-int skew_test_max_key = 10000000;
+int skew_test_max_key = 40000000;
 
 void MakeBasicTree(TreeType *t){
   for(int i = 0; i < skew_test_max_key; i++){
@@ -32,7 +32,7 @@ void UniformTest(uint64_t thread_id, TreeType *t){
 
   std::chrono::duration<double> elapsed_seconds = end - start;
 
-    // Measure the overhead
+  // Measure the overhead
   std::vector<long int> v{};
   v.reserve(100);
 
@@ -123,14 +123,87 @@ void SkewTest(TreeType *t) {
 
   LaunchParallelTestID(t, num_thread, func2, t);
 
-  double elapsed_seconds = 0.0;
+  double cpu_seconds = 0.0;
   for(int i = 0;i < num_thread;i++) {
-    elapsed_seconds += thread_time[i];
+    cpu_seconds += thread_time[i];
   }
 
   std::cout << num_thread << " Threads BwTree: overall "
-            << (iter * key_num / (1024.0 * 1024.0)) / (elapsed_seconds / num_thread)
+            << (iter * key_num / (1024.0 * 1024.0)) / (cpu_seconds / num_thread)
             << " million update (zipfian)/sec" << "\n";
+  std::cout << "Total CPU Time: " << cpu_seconds << "\n";
+  return;
+}
 
+void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
+  const int num_thread = skew_test_thread_num;
+  const int key_num = skew_test_max_key;
+  const int iter = key_num / num_thread;
+
+  // This is used to record time taken for each individual thread
+  double thread_time[num_thread];
+  for(int i = 0;i < num_thread;i++) {
+    thread_time[i] = 0.0;
+  }
+
+  std::random_device r{};
+  std::default_random_engine e1(r());
+  std::uniform_int_distribution<long int> uniform_dist(start_index, end_index - 1);
+
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+
+  auto func2 = [key_num,
+                &thread_time,
+                start_index,
+                end_index,
+                iter,
+                num_thread](uint64_t thread_id, TreeType *t) {
+    std::random_device r{};
+    std::default_random_engine e1(r());
+    std::uniform_int_distribution<long int> uniform_dist(start_index, end_index - 1);
+    std::vector<long> v{};
+    v.reserve(1);
+
+    Timer timer{true};
+    CacheMeter cache{true};
+
+    for(long i = 0; i < iter; i++) {
+      long int key = uniform_dist(e1);
+
+      t->Update(key, key, key);
+
+      v.clear();
+    }
+
+    cache.Stop();
+    double duration = timer.Stop();
+
+    thread_time[thread_id] = duration;
+
+    std::cout << "[Thread " << thread_id << " Done] @ " \
+              << iter / duration \
+              << " update/sec in " << duration << " seconds" << "\n";
+
+    cache.PrintL3CacheUtilization();
+    cache.PrintL1CacheUtilization();
+
+    return;
+  };
+
+  LaunchParallelTestID(t, num_thread, func2, t);
+  end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  double cpu_seconds = 0.0;
+  for(int i = 0;i < num_thread;i++) {
+    cpu_seconds += thread_time[i];
+  }
+
+  std::cout << num_thread << " Threads BwTree: overall " \
+            << key_num / (cpu_seconds / num_thread) \
+            << " update/sec" << "\n";
+  std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
+  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds\n";
   return;
 }

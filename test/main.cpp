@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
   bool run_email_test = false;
   bool run_mixed_test = false;
   bool run_rand_operation = false;
-  bool run_skew_test = false;
+  bool run_uniform_update =false;
+  bool run_skew_update = false;
 
   int opt_index = 1;
   int rand_idx;
@@ -65,8 +66,10 @@ int main(int argc, char **argv) {
       rand_idx = opt_index;
       opt_index += 3;
       continue;
-    } else if(strcmp(opt_p, "--skew-test") == 0){
-      run_skew_test = true;
+    } else if(strcmp(opt_p, "--uniform-update") == 0) {
+      run_uniform_update = true;
+    } else if(strcmp(opt_p, "--skew-update") == 0){
+      run_skew_update = true;
     } else {
       printf("ERROR: Unknown option: %s\n", opt_p);
 
@@ -86,7 +89,8 @@ int main(int argc, char **argv) {
   bwt_printf("RUN_INFINITE_INSERT_TEST = %d\n", run_infinite_insert_test);
   bwt_printf("RUN_EMAIL_TEST = %d\n", run_email_test);
   bwt_printf("RUN_MIXED_TEST = %d\n", run_mixed_test);
-  bwt_printf("RUN_SKEW_TEST = %d\n", run_skew_test);
+  bwt_printf("RUN_UNIFORM_TEST = %d\n", run_uniform_update);
+  bwt_printf("RUN_SKEW_TEST = %d\n", run_skew_update);
   bwt_printf("======================================\n");
 
   //////////////////////////////////////////////////////
@@ -405,11 +409,25 @@ int main(int argc, char **argv) {
     BenchmarkRandOperation(std::stoi(instruction_num), std::stoi(thread_num));
   }
 
-  if(run_skew_test == true) {
+  if (run_uniform_update) {
     t1 = GetEmptyTree();
+    printf("Creating Basic Tree\n");
     MakeBasicTree(t1);
-    LaunchParallelTestID(t1, skew_test_thread_num, UniformTest, t1);
-    SkewTest(t1);
+    printf("\nUniform Update Test Start\n");
+    // LaunchParallelTestID(t1, skew_test_thread_num, UniformTest, t1);
+    DistributeUpdateTest(t1, 0, skew_test_max_key);
+    printf("Uniform Update Test Done\n\n");
+    DestroyTree(t1);
+  }
+
+  if (run_skew_update == true) {
+    t1 = GetEmptyTree();
+    printf("Creating Basic Tree\n");
+    MakeBasicTree(t1);
+    printf("\nSkew Update Test Start\n");
+    // SkewTest(t1);
+    DistributeUpdateTest(t1, skew_test_max_key/2, skew_test_max_key/2 + skew_test_max_key/16);
+    printf("Skew Update Test Done\n\n");
     DestroyTree(t1);
   }
 

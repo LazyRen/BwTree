@@ -1036,6 +1036,7 @@ extern int skew_test_max_key;
 void UniformTest(uint64_t thread_id, TreeType *t);
 void MakeBasicTree(TreeType *t);
 void SkewTest(TreeType *t);
+void DistributeUpdateTest(TreeType *t, int start_index, int end_index);
 
 /* added */
 
