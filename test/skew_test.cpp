@@ -162,8 +162,6 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
     std::random_device r{};
     std::default_random_engine e1(r());
     std::uniform_int_distribution<long int> uniform_dist(start_index, end_index - 1);
-    std::vector<long> v{};
-    v.reserve(1);
 
     Timer timer{true};
     CacheMeter cache{true};
@@ -174,7 +172,6 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
       bool ret = t->Update(key, key, key);
       if (!ret)
         failed += 1;
-      v.clear();
     }
 
     cache.Stop();
@@ -186,6 +183,8 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
     std::cout << "[Thread " << thread_id << " Done] @ " \
               << iter / duration \
               << " update/sec in " << duration << " seconds" << "\n";
+
+    std::cout << failed << "failed operations\n"
 
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
