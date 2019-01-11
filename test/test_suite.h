@@ -1037,6 +1037,7 @@ void UniformTest(uint64_t thread_id, TreeType *t);
 void MakeBasicTree(TreeType *t);
 void SkewTest(TreeType *t);
 void DistributeUpdateTest(TreeType *t, int start_index, int end_index);
+void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew_threads);
 
 /* added */
 
