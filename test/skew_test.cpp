@@ -213,7 +213,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   if (skew_threads > num_thread) {
     std::cout << "skew_threads argv out of range\n";
     std::cout << "skew_threads: " << skew_threads << ", " \
-    std::cout << "total_threads: " << num_thread << "\n";
+              << "total_threads: " << num_thread << endl;
 
     return;
   }
@@ -254,15 +254,16 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
     cache.Stop();
     printf("%d failed\n", failed);
+    fflush(stdout);
     double duration = timer.Stop();
 
     thread_time[thread_id] = duration;
 
     std::cout << "[" << (isSkew ? "Skew": "Uniform") << " Thread " << thread_id << " Done] @ " \
               << iter / duration \
-              << " update/sec in " << duration << " seconds" << "\n";
+              << " update/sec in " << duration << " seconds" << endl;
 
-    std::cout << failed << " failed operations\n";
+    std::cout << failed << " failed operations" << endl;
 
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
@@ -283,9 +284,9 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
             << key_num / (cpu_seconds / num_thread) \
             << " update/sec" << "\n";
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
-  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds\n";
+  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
 
   std::cout << "Skew Test with " << skew_threads << " threads," \
-            << "Uniform Test with " << num_thread - skew_threads << " threads.\n";
+            << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
   return;
 }

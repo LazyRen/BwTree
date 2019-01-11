@@ -20,7 +20,7 @@ TreeType *GetEmptyTree(bool no_print) {
   if(no_print == false) {
     print_flag = true;
   }
-  
+
   TreeType *t1 = new TreeType{true,
                               KeyComparator{1},
                               KeyEqualityChecker{1}};
@@ -31,17 +31,17 @@ TreeType *GetEmptyTree(bool no_print) {
   t1->AssignGCID(0);
 
   print_flag = false;
-  
+
   return t1;
 }
 
 /*
  * GetEmptyBTree() - Returns an empty Btree multimap object created on the heap
- */ 
+ */
 BTreeType *GetEmptyBTree() {
   BTreeType *t = new BTreeType{KeyComparator{1}};
-  
-  return t; 
+
+  return t;
 }
 
 /*
@@ -55,11 +55,11 @@ void DestroyTree(TreeType *t, bool no_print) {
   if(no_print == false) {
     print_flag = true;
   }
-  
+
   delete t;
-  
+
   print_flag = false;
-  
+
   return;
 }
 
@@ -67,7 +67,7 @@ void DestroyTree(TreeType *t, bool no_print) {
  * DestroyBTree() - Destroies the btree multimap instance created on the heap
  */
 void DestroyBTree(BTreeType *t) {
-  delete t; 
+  delete t;
 }
 
 /*

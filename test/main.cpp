@@ -445,10 +445,13 @@ int main(int argc, char **argv) {
   if (run_new_skew_update == true) {
     t1 = GetEmptyTree(true);
     printf("Creating Basic Tree\n");
+    fflush(stdout);
     MakeBasicTree(t1);
     printf("\nNew Skew Update Test Starts\n");
+    fflush(stdout);
     DistributeUpdateTest2(t1, skew_test_max_key/2, skew_test_max_key/2 + skew_test_max_key/20, skew_threads);
-    printf("NewSkew Update Test Done\n\n");
+    printf("New Skew Update Test Done\n\n");
+    fflush(stdout);
     DestroyTree(t1, true);
   }
   return 0;

@@ -46,3 +46,4 @@ bin
 build
 
 .DS_Store
+*.perf
