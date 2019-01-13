@@ -39,6 +39,7 @@ main
 *.doc
 *.swp
 test/create_input
+.vscode
 
 *.gcov
 
