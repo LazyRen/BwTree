@@ -7455,7 +7455,7 @@ before_switch:
     TraverseReadOptimized(&context, &v);
 
     auto itOldVal = std::find(v.begin(), v.end(), oldValue);
-    auto itNewVal = std::find(v.begin(), v.end(), newValue);
+    // auto itNewVal = std::find(v.begin(), v.end(), newValue);
 
     /* update will be performed iff old value is exist and new value is not.*/
     // if (itOldVal != v.end() && itNewVal == v.end()) {

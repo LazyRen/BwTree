@@ -3,7 +3,7 @@
 
 using namespace std;
 
-int skew_test_thread_num = 8;
+int skew_test_thread_num = 48;
 int skew_test_max_key = 40000000;
 
 void MakeBasicTree(TreeType *t){
@@ -142,8 +142,10 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
   // This is used to record time taken for each individual thread
   double thread_time[num_thread];
+  int failed_cnt[num_thread]
   for(int i = 0;i < num_thread;i++) {
     thread_time[i] = 0.0;
+    failed_cnt[i] = 0;
   }
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -171,16 +173,14 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
     }
 
     cache.Stop();
-    printf("%d failed\n", failed);
     double duration = timer.Stop();
 
     thread_time[thread_id] = duration;
+    failed_cnt[thread_id] = failed;
 
     std::cout << "[Thread " << thread_id << " Done] @ " \
               << iter / duration \
               << " update/sec in " << duration << " seconds" << "\n";
-
-    std::cout << failed << "failed operations\n";
 
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
@@ -193,13 +193,15 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
   std::chrono::duration<double> elapsed_seconds = end - start;
   double cpu_seconds = 0.0;
+  int total_failed = 0;
   for(int i = 0;i < num_thread;i++) {
     cpu_seconds += thread_time[i];
+    total_failed += failed_cnt[i];
   }
 
   std::cout << num_thread << " Threads BwTree: overall " \
             << key_num / (cpu_seconds / num_thread) \
-            << " update/sec" << "\n";
+            << " update/sec with " << total_failed << "failed operations\n";
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds\n";
   return;
@@ -220,8 +222,10 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
   // This is used to record time taken for each individual thread
   double thread_time[num_thread];
+  int failed_cnt[num_thread];
   for(int i = 0;i < num_thread;i++) {
     thread_time[i] = 0.0;
+    failed_cnt[i] = 0;
   }
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -253,17 +257,14 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
     }
 
     cache.Stop();
-    printf("%d failed\n", failed);
-    fflush(stdout);
     double duration = timer.Stop();
 
     thread_time[thread_id] = duration;
+    failed_cnt[thread_id] = failed;
 
     std::cout << "[" << (isSkew ? "Skew": "Uniform") << " Thread " << thread_id << " Done] @ " \
               << iter / duration \
               << " update/sec in " << duration << " seconds" << endl;
-
-    std::cout << failed << " failed operations" << endl;
 
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
@@ -276,13 +277,15 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
   std::chrono::duration<double> elapsed_seconds = end - start;
   double cpu_seconds = 0.0;
+  int total_failed = 0;
   for(int i = 0;i < num_thread;i++) {
     cpu_seconds += thread_time[i];
+    total_failed += failed_cnt[i];
   }
 
   std::cout << num_thread << " Threads BwTree: overall " \
             << key_num / (cpu_seconds / num_thread) \
-            << " update/sec" << "\n";
+            << " update/sec with " << total_failed << "failed operations\n";
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
 

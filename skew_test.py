@@ -11,6 +11,7 @@ import struct
 
 EXECUTABLE_NAME = 'main'
 EXECUTABLE_ARGV = '--new-skew-update'
+TOTAL_THREAD = 48
 
 def test_case(total_thread_num):
     start = timer()
@@ -33,6 +34,6 @@ def test_case(total_thread_num):
     return end - start
 
 
-elapse = test_case(8)
+elapse = test_case(TOTAL_THREAD)
 
-print("Total Elapsed Time: %.2f sec" % (elapse))
+print("%d Tests took %.2f sec of Elapsed Time" % (TOTAL_THREAD, elapse))
