@@ -202,7 +202,7 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
   std::cout << num_thread << " Threads BwTree: overall " \
             << key_num / (cpu_seconds / num_thread) \
-            << " update/sec with " << total_failed << "failed operations\n";
+            << " update/sec with " << total_failed << " failed operations\n";
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds\n";
   return;
@@ -211,7 +211,7 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew_threads) {
   const int num_thread = skew_test_thread_num;
   const int key_num = skew_test_max_key;
-  const int iter = key_num / num_thread;
+  const int iter = 2000000;
 
   if (skew_threads > num_thread) {
     std::cout << "skew_threads argv out of range\n";
@@ -264,9 +264,10 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
     thread_time[thread_id] = duration;
     failed_cnt[thread_id] = failed;
 
-    std::cout << "[" << (isSkew ? "Skew": "Uniform") << " Thread " << thread_id << " Done] @ " \
-              << iter / duration \
-              << " update/sec in " << duration << " seconds" << endl;
+    std::cout << "[" << (isSkew ? "Skew   ": "Uniform") << " Thread " \
+              << std::setw(2) << thread_id << " Done] @ " \
+              << std::fixed << std::setprecision(1) << std::setw(6) << iter / duration << " update/sec in " \
+              << std::setprecision(5) << std::setw(8) <<  duration << " seconds" << endl;
 
     cache.PrintL3CacheUtilization();
     cache.PrintL1CacheUtilization();
@@ -287,7 +288,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
   std::cout << num_thread << " Threads BwTree: overall " \
             << key_num / (cpu_seconds / num_thread) \
-            << " update/sec with " << total_failed << "failed operations\n";
+            << " update/sec with " << total_failed << " failed operations\n";
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
 

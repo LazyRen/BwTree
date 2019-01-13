@@ -13,6 +13,9 @@ EXECUTABLE_NAME = 'main'
 EXECUTABLE_ARGV = '--new-skew-update'
 TOTAL_THREAD = 48
 
+def run_perf():
+    
+
 def test_case(total_thread_num):
     start = timer()
     runPerf = False
@@ -27,8 +30,9 @@ def test_case(total_thread_num):
             for line in p.stdout:
                 print(line, end='') # process line here
                 if (line.strip() == 'New Skew Update Test Starts') and runPerf:
+		    sleep(5)
                     print("pid %d perf will be recorded on skew%d.perf" % (p.pid, i))
-                    os.system("sudo perf record --call-graph dwarf -o skew%d.perf -p %d" % (i, p.pid))
+                    os.system("perf record --call-graph dwarf -o skew%d.perf -p %d" % (i, p.pid))
     end = timer()
 
     return end - start

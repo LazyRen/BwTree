@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
         continue;
       }
       run_new_skew_update = true;
+      print_flag = false;
       skew_threads = std::stoi(argv[++opt_index]);
     } else {
       printf("ERROR: Unknown option: %s\n", opt_p);
@@ -88,7 +89,7 @@ int main(int argc, char **argv) {
 
     opt_index++;
   }
-
+  
   bwt_printf("RUN_BENCHMARK_ALL = %d\n", run_benchmark_all);
   bwt_printf("RUN_BENCHMARK_BWTREE_FULL = %d\n", run_benchmark_bwtree_full);
   bwt_printf("RUN_BENCHMARK_BWTREE = %d\n", run_benchmark_bwtree);
