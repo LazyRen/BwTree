@@ -142,7 +142,7 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
   // This is used to record time taken for each individual thread
   double thread_time[num_thread];
-  int failed_cnt[num_thread]
+  int failed_cnt[num_thread];
   for(int i = 0;i < num_thread;i++) {
     thread_time[i] = 0.0;
     failed_cnt[i] = 0;
@@ -153,6 +153,7 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
 
   auto func2 = [key_num,
                 &thread_time,
+		&failed_cnt,
                 start_index,
                 end_index,
                 iter,
@@ -233,6 +234,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
   auto func2 = [key_num,
                 &thread_time,
+		&failed_cnt,
                 start_index,
                 end_index,
                 skew_threads,
