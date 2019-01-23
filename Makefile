@@ -1,7 +1,6 @@
-MYFLAG = -DNO_USE_PAPI
 CXX = g++-5
 PAPI_FLAG = -lpapi
-CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(MYFLAG) $(PAPI_FLAG)
+CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(PAPI_FLAG)
 # CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(MYFLAG)
 GMON_FLAG =
 OPT_FLAG = -O2

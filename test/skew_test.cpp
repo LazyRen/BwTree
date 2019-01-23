@@ -1,9 +1,9 @@
 #include "test_suite.h"
-
+#include <unistd.h>
 
 using namespace std;
 
-int skew_test_thread_num = 48;
+int skew_test_thread_num = 44;
 int skew_test_max_key = 40000000;
 
 void MakeBasicTree(TreeType *t){
@@ -207,6 +207,13 @@ void DistributeUpdateTest(TreeType *t, int start_index, int end_index) {
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds\n";
   return;
 }
+void CleanCache() {
+     const int size = 20*1024*1024; // Allocate 20M. Set much larger then L2
+     char *c = (char *)malloc(size);
+     for (int i = 0; i < 0xffff; i++)
+       for (int j = 0; j < size; j++)
+         c[j] = i*j;
+}
 
 void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew_threads) {
   const int num_thread = skew_test_thread_num;
@@ -231,7 +238,9 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
-
+  CleanCache();
+  printf("perf\n");
+  sleep(2);
   auto func2 = [key_num,
                 &thread_time,
 		&failed_cnt,
@@ -248,7 +257,6 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
       uniform_dist = std::uniform_int_distribution<long int>(start_index, end_index - 1);
 
     Timer timer{true};
-    CacheMeter cache{true};
     int failed = 0;
     for(long i = 0; i < iter; i++) {
       long int key = uniform_dist(e1);
@@ -258,7 +266,6 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
         failed += 1;
     }
 
-    cache.Stop();
     double duration = timer.Stop();
 
     thread_time[thread_id] = duration;
@@ -268,9 +275,6 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
               << std::setw(2) << thread_id << " Done] @ " \
               << std::fixed << std::setprecision(1) << std::setw(6) << iter / duration << " update/sec in " \
               << std::setprecision(5) << std::setw(8) <<  duration << " seconds" << endl;
-
-    cache.PrintL3CacheUtilization();
-    cache.PrintL1CacheUtilization();
 
     return;
   };
