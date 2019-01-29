@@ -49,21 +49,21 @@ def run_stat(testNum, mmainPID, perfDuration):
 
 
 def test_case(total_thread_num):
-    
+
     runPerf = False
     runStat = False
     start_delay = 10
     perf_duration = 5
-    for (i in range(1, len(sys.argv))):
+    for i in range(1, len(sys.argv)):
         if sys.argv[i] == 'perf':
             print("Recording Perf Enabled")
             runPerf = True
         if sys.argv[i] == 'cache':
             print("Analyze Cache using Perf Stat")
             runStat = True
-    if (runPerf and runStat):
-        print("You can only activate one perf option at a time")
-        return 0
+    # if (runPerf and runStat):
+    #     print("You can only activate one perf option at a time")
+    #     return 0
 
     start = timer()
     for i in range(0, total_thread_num + 1, SKIP_THREAD):
