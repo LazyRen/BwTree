@@ -11,19 +11,21 @@ import struct
 
 EXECUTABLE_NAME = 'main'
 EXECUTABLE_ARGV = '--new-skew-update'
-STAT_COMMAND='sudo perf stat'
-STAT_OPTION='-B -d -d -d -e cache-references,cache-misses,LLC-load-misses,LLC-loads,LLC-prefetch-misses,LLC-prefetches,LLC-store-misses,LLC-stores'
+RECORD_COMMAND='perf record'
+RECORD_OPTION='--call-graph dwarf'
+STAT_COMMAND='perf stat'
+STAT_OPTION= '-B -d -d -d -e cache-references,cache-misses,LLC-load-misses,LLC-loads,LLC-prefetch-misses,LLC-prefetches,LLC-store-misses,LLC-stores'
 TOTAL_THREAD = 48
 SKIP_THREAD = 4
 
 def run_perf(testNum, mainPID, perfDuration):
     resultFile = os.path.dirname(os.path.realpath(__file__)) + "/skew" + str(testNum) + ".perf"
-    print("Running perf for %d secs" % (perfDuration))
+    print("Running perf record for %d secs" % (perfDuration))
     print("pid %d perf will be recorded on %s" % (mainPID, resultFile))
     # os.system("perf record --call-graph dwarf -o skew%d.perf -p %d" % (i, mainPID))
+    args = RECORD_COMMAND.split() + RECORD_OPTION.split() + ["-p", str(mainPID)] + ["-o", resultFile]
     s = timer()
-    perf = Popen(["sudo", "perf", "record", "--call-graph", "dwarf", "-o", resultFile, "-p", str(main_pid)], \
-               cwd=os.path.dirname(os.path.realpath(__file__)), preexec_fn=os.setsid)
+    perf = Popen(args, cwd=os.path.dirname(os.path.realpath(__file__)), preexec_fn=os.setsid)
     print("Perf started on %d" % perf.pid)
     TerminateTimer = Timer(perfDuration, os.killpg, [os.getpgid(perf.pid), signal.SIGINT])
     TerminateTimer.start()
@@ -32,13 +34,13 @@ def run_perf(testNum, mainPID, perfDuration):
     duration = e - s
     print("perf ended after %.2f secs" % duration)
 
-def run_stat(testNum, mmainPID, perfDuration):
+def run_stat(testNum, mainPID, perfDuration):
     resultFile = os.path.dirname(os.path.realpath(__file__)) + "/skew" + str(testNum) + "cache.txt"
-    print("Running perf Stat for %d secs" % (perfDuration))
-    print("pid %d perf will be recorded on %s" % (mainPID, resultFile))
-    s = timer()
+    print("Running perf stat for %d secs" % (perfDuration))
+    print("pid %d stat will be recorded on %s" % (mainPID, resultFile))
     args = STAT_COMMAND.split() + STAT_OPTION.split() + ["-p", str(mainPID)] + ["-o", resultFile]
-    perf = Popen(args, cwd=os.path.dirname(os.path.realpath(__file__)), preexec_fn=os.setsid)
+    s = timer()
+    perf = Popen(args, cwd=os.path.dirname(os.path.realpath(__file__)), preexec_fn=os.setpgrp)
     print("Perf Stat started on %d" % perf.pid)
     TerminateTimer = Timer(perfDuration, os.killpg, [os.getpgid(perf.pid), signal.SIGINT])
     TerminateTimer.start()
@@ -47,9 +49,7 @@ def run_stat(testNum, mmainPID, perfDuration):
     duration = e - s
     print("perf Stat ended after %.2f secs" % duration)
 
-
 def test_case(total_thread_num):
-
     runPerf = False
     runStat = False
     start_delay = 10
@@ -66,7 +66,8 @@ def test_case(total_thread_num):
     #     return 0
 
     start = timer()
-    for i in range(0, total_thread_num + 1, SKIP_THREAD):
+#    for i in range(0, total_thread_num + 1, SKIP_THREAD):
+    for i in range(0, TOTAL_THREAD + 1, SKIP_THREAD):
         # cmd = "./" + EXECUTABLE_NAME + (EXECUTABLE_ARGV % i)
         print("RUNNING SKEW TEST with %d threads" % i)
         with Popen(["./" + EXECUTABLE_NAME, EXECUTABLE_ARGV, str(i)], cwd=os.path.dirname(os.path.realpath(__file__)), stdin=PIPE, stdout=PIPE, bufsize=1, universal_newlines=True) as p:

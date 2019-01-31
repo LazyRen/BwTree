@@ -17,13 +17,14 @@ do
 	echo "Test $i/$ITER_NUM skew_update threads"
 	$TEST_MAIN $i >> $TEST_RESULT &
 	export MAIN_PID=$!
-	sleep 30s
+	sleep 36s
 #	MAIN_PID=`ps -ef --sort=-pcpu | grep 'main' | awk '{print $2}'| head -1`
 	$TEST_COMMAND -o $PERF_RESULT/$i.result.txt $TEST_OPTION $MAIN_PID &
 	export PERF_PID=$!
 	echo $PERF_PID
 	echo `ps -ef | grep 'perf' | awk '{print $2}'|head -2|tail -1`
-	wait $MAIN_PID
+#	wait $MAIN_PID
+	sleep 5s
 	if [[ "" !=  "$PERF_PID" ]]; then
 	  kill -2 $PERF_PID
 	fi
