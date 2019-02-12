@@ -76,7 +76,7 @@ def test_case(total_thread_num):
                 if runPerf and (line.strip() == 'New Skew Update Test Starts'):
                     t = Timer(start_delay, run_perf, [i, p.pid, perf_duration])
                     t.start()
-                if runStat and (line.strip() == 'New Skew Update Test Starts'):
+                if runStat and (line.strip() == 'cache cleaned'):
                     t = Timer(start_delay, run_stat, [i, p.pid, perf_duration])
                     t.start()
     end = timer()

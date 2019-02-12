@@ -237,10 +237,11 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   }
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
-  start = std::chrono::system_clock::now();
   CleanCache();
-  printf("perf\n");
-  sleep(2);
+  printf("cache cleaned\n");
+  fflush(stdout);
+  sleep(1);
+  start = std::chrono::system_clock::now();
   auto func2 = [key_num,
                 &thread_time,
 		&failed_cnt,
