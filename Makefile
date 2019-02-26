@@ -3,7 +3,7 @@ PAPI_FLAG = -lpapi
 CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(PAPI_FLAG)
 # CXX_FLAG = -pthread -std=c++11 -g -ggdb -Wall -mcx16 -Wno-invalid-offsetof $(MYFLAG)
 GMON_FLAG =
-OPT_FLAG = -O2
+OPT_FLAG = -O2 -DBWTREE_NODEBUG
 PRELOAD_LIB = LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so
 SRC = ./test/main.cpp ./src/bwtree.h ./src/bloom_filter.h ./src/atomic_stack.h ./src/sorted_small_set.h ./test/test_suite.h ./test/test_suite.cpp ./test/random_pattern_test.cpp ./test/basic_test.cpp ./test/mixed_test.cpp ./test/performance_test.cpp ./test/stress_test.cpp ./test/iterator_test.cpp ./test/misc_test.cpp ./test/skew_test.cpp ./test/benchmark_bwtree_full.cpp ./benchmark/spinlock/spinlock.cpp ./test/benchmark_btree_full.cpp ./test/benchmark_art_full.cpp ./test/testscript.cpp
 OBJ = ./build/main.o ./build/bwtree.o ./build/test_suite.o ./build/random_pattern_test.o ./build/basic_test.o ./build/mixed_test.o ./build/performance_test.o ./build/stress_test.o ./build/iterator_test.o ./build/misc_test.o ./build/benchmark_bwtree_full.o ./build/spinlock.o ./build/benchmark_btree_full.o ./build/benchmark_art_full.o ./build/art.o ./build/testscript.o ./build/skew_test.o

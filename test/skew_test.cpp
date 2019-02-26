@@ -237,7 +237,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   }
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
-  CleanCache();
+//  CleanCache();
   printf("cache cleaned\n");
   fflush(stdout);
   sleep(1);

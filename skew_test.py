@@ -66,8 +66,8 @@ def test_case(total_thread_num):
     #     return 0
 
     start = timer()
-#    for i in range(0, total_thread_num + 1, SKIP_THREAD):
-    for i in range(0, TOTAL_THREAD + 1, SKIP_THREAD):
+    for i in range(44, 45, SKIP_THREAD):
+#    for i in range(16, 17, SKIP_THREAD):
         # cmd = "./" + EXECUTABLE_NAME + (EXECUTABLE_ARGV % i)
         print("RUNNING SKEW TEST with %d threads" % i)
         with Popen(["./" + EXECUTABLE_NAME, EXECUTABLE_ARGV, str(i)], cwd=os.path.dirname(os.path.realpath(__file__)), stdin=PIPE, stdout=PIPE, bufsize=1, universal_newlines=True) as p:
