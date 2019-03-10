@@ -52,7 +52,7 @@ def run_stat(testNum, mainPID, perfDuration):
 def test_case(total_thread_num):
     runPerf = False
     runStat = False
-    start_delay = 10
+    start_delay = 5
     perf_duration = 5
     for i in range(1, len(sys.argv)):
         if sys.argv[i] == 'perf':
