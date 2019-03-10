@@ -300,4 +300,103 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   std::cout << "Skew Test with " << skew_threads << " threads," \
             << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
   return;
+
+
+void ZipfianSkewTest(TreeType *t, double skewness) {
+  const int num_thread = skew_test_thread_num;
+  const int key_num = skew_test_max_key;
+  const int iter = 2000000;
+
+  if (skew_threads > num_thread) {
+    std::cout << "skew_threads argv out of range\n";
+    std::cout << "skew_threads: " << skew_threads << ", " \
+              << "total_threads: " << num_thread << endl;
+
+    return;
+  }
+
+  // This is used to record time taken for each individual thread
+  double thread_time[num_thread];
+  int failed_cnt[num_thread];
+  for(int i = 0;i < num_thread;i++) {
+    thread_time[i] = 0.0;
+    failed_cnt[i] = 0;
+  }
+
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+//  CleanCache();
+  std::vector<long> zipfian_key_list{};
+  zipfian_key_list.reserve(key_num);
+
+  // Initialize it with time() as the random seed
+  Zipfian zipf{(uint64_t)key_num, skewness, (uint64_t)time(NULL)};
+
+  // Populate the array with random numbers
+  for(int i = 0;i < key_num;i++) {
+    zipfian_key_list.push_back(zipf.Get());
+  }
+  printf("cache cleaned\n");
+  fflush(stdout);
+  sleep(1);
+  start = std::chrono::system_clock::now();
+  auto func2 = [key_num,
+                &thread_time,
+                &failed_cnt,
+                start_index,
+                end_index,
+                skew_threads,
+                iter,
+                num_thread,
+                &zipfian_key_list](uint64_t thread_id, TreeType *t) {
+    std::random_device r{};
+    std::default_random_engine e1(r());
+    std::uniform_int_distribution<long int> uniform_dist(0, key_num - 1);
+    bool isSkew = (int)thread_id < skew_threads;
+    Timer timer{true};
+    int failed = 0;
+    for(long i = 0; i < iter; i++) {
+      long int key;
+      if(isSkew){
+        key = zipfian_key_list[uniform_dist(e1)];
+      }else{
+        key = uniform_dist(e1);
+      }
+      bool ret = t->Update(key, key, key);
+      if (!ret)
+        failed += 1;
+    }
+
+    double duration = timer.Stop();
+
+    thread_time[thread_id] = duration;
+    failed_cnt[thread_id] = failed;
+
+    std::cout << "[" << (isSkew ? "Skew   ": "Uniform") << " Thread " \
+              << std::setw(2) << thread_id << " Done] @ " \
+              << std::fixed << std::setprecision(1) << std::setw(6) << iter / duration << " update/sec in " \
+              << std::setprecision(5) << std::setw(8) <<  duration << " seconds" << endl;
+
+    return;
+  };
+
+  LaunchParallelTestID(t, num_thread, func2, t);
+  end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  double cpu_seconds = 0.0;
+  int total_failed = 0;
+  for(int i = 0;i < num_thread;i++) {
+    cpu_seconds += thread_time[i];
+    total_failed += failed_cnt[i];
+  }
+
+  std::cout << num_thread << " Threads BwTree: overall " \
+            << key_num / (cpu_seconds / num_thread) \
+            << " update/sec with " << total_failed << " failed operations\n";
+  std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
+  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
+
+  std::cout << "Skew Test with " << skew_threads << " threads," \
+            << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
+  return;
 }
