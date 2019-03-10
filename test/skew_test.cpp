@@ -302,7 +302,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   return;
 }
 
-void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threads, double skewness) {
+void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threads) {
   const int num_thread = skew_test_thread_num;
   const int key_num = skew_test_max_key;
   const int iter = 2000000;
@@ -329,7 +329,7 @@ void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threa
   zipfian_key_list.reserve(key_num);
 
   // Initialize it with time() as the random seed
-  Zipfian zipf{(uint64_t)key_num, skewness, (uint64_t)time(NULL)};
+  Zipfian zipf{(uint64_t)key_num, 0.95, (uint64_t)time(NULL)};
 
   // Populate the array with random numbers
   for(int i = 0;i < key_num;i++) {
