@@ -302,7 +302,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   return;
 }
 
-void ZipfianSkewTest(TreeType *t, double skewness) {
+void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threads, double skewness) {
   const int num_thread = skew_test_thread_num;
   const int key_num = skew_test_max_key;
   const int iter = 2000000;

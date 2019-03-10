@@ -1039,7 +1039,7 @@ void MakeBasicTree(TreeType *t);
 void SkewTest(TreeType *t);
 void DistributeUpdateTest(TreeType *t, int start_index, int end_index);
 void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew_threads);
-void ZipfianSkewTest(TreeType *t, double skewness);
+void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threads, double skewness);
 /* added */
 
 template <typename Fn, typename... Args>
