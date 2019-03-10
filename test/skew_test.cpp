@@ -300,7 +300,7 @@ void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew
   std::cout << "Skew Test with " << skew_threads << " threads," \
             << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
   return;
-
+}
 
 void ZipfianSkewTest(TreeType *t, double skewness) {
   const int num_thread = skew_test_thread_num;
