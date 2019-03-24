@@ -3360,6 +3360,145 @@ abort_traverse:
     return nullptr;
   }
 
+    const std::pair<KeyValuePair, KeyValuePair> *Traverse(Context *context_p,
+                                 const ValueType *value_p1,
+                                 const ValueType *value_p2,
+                                 std::pair<int, bool> *index_pair_p) {
+
+      // For value collection it always returns nullptr
+      const KeyValuePair *found_pair_p1 = nullptr;
+      const KeyValuePair *found_pair_p2 = nullptr;
+      const std::pair<KeyValuePair, KeyValuePair> *ret = nullptr;
+
+  retry_traverse:
+      assert(context_p->abort_flag == false);
+      #ifdef BWTREE_DEBUG
+      assert(context_p->current_level == -1);
+      #endif
+      // This is the serialization point for reading/writing root node
+      NodeID start_node_id = root_id.load();
+
+      // This is used to identify root nodes
+      // NOTE: We set current snapshot since in LoadNodeID() or read opt.
+      // version the parent node snapshot will be overwritten with this child
+      // node snapshot
+      //
+      // NOTE 2: We could not use GetLatestNodeSnashot() here since it checks
+      // current_level, which is -1 at this point
+      context_p->current_snapshot.node_id = INVALID_NODE_ID;
+
+      // We need to call this even for root node since there could
+      // be split delta posted on to root node
+      LoadNodeID(start_node_id, context_p);
+
+      // There could be an abort here, and we could not directly jump
+      // to Init state since we would like to do some clean up or
+      // statistics after aborting
+      if(context_p->abort_flag == true) {
+        goto abort_traverse;
+      }
+
+      bwt_printf("Successfully loading root node ID\n");
+
+      while(1) {
+        NodeID child_node_id = NavigateInnerNode(context_p);
+
+        // Navigate could abort since it might go to another NodeID
+        // if there is a split delta and the key is >= split key
+        if(context_p->abort_flag == true) {
+          bwt_printf("Navigate Inner Node abort. ABORT\n");
+
+          // If NavigateInnerNode() aborts then it retrns INVALID_NODE_ID
+          // as a double check
+          // This is the only situation that this function returns
+          // INVALID_NODE_ID
+          assert(child_node_id == INVALID_NODE_ID);
+
+          goto abort_traverse;
+        }
+
+        // This might load a leaf child
+        // Also LoadNodeID() does not guarantee the node bound matches
+        // seatch key. Since we could readjust using the split side link
+        // during Navigate...Node()
+        LoadNodeID(child_node_id, context_p);
+
+        if(context_p->abort_flag == true) {
+          bwt_printf("LoadNodeID aborted. ABORT\n");
+
+          goto abort_traverse;
+        }
+
+        // This is the node we have just loaded
+        NodeSnapshot *snapshot_p = GetLatestNodeSnapshot(context_p);
+
+        if(snapshot_p->IsLeaf() == true) {
+          bwt_printf("The next node is a leaf\n");
+
+          break;
+        }
+      } //while(1)
+
+      if(value_p1 == nullptr && value_p2 == nullptr) {
+        // We are using an iterator just to get a leaf page
+        assert(index_pair_p == nullptr);
+
+        // If both are nullptr then we just navigate the sibling chain
+        // to find the correct node with the correct range
+        // And then the iterator will consolidate the node without actually
+        // going down with a specific key
+        NavigateSiblingChain(context_p);
+      } else {
+        // If a value is given then use this value to Traverse down leaf
+        // page to find whether the value exists or not
+        if (value_p1 != nullptr)
+          found_pair_p1 = NavigateLeafNode(context_p, *value_p1, index_pair_p);
+        if (value_p2 != nullptr)
+          found_pair_p2 = NavigateLeafNode(context_p, *value_p2, index_pair_p);
+        ret = std::make_pair(found_pair_p1, found_pair_p2);
+      }
+
+      if(context_p->abort_flag == true) {
+        bwt_printf("NavigateLeafNode() or NavigateSiblingChain()"
+                   " aborts. ABORT\n");
+
+        goto abort_traverse;
+      }
+
+      #ifdef BWTREE_DEBUG
+
+      bwt_printf("Found leaf node. Abort count = %d, level = %d\n",
+                 context_p->abort_counter,
+                 context_p->current_level);
+
+      #endif
+
+      // If there is no abort then we could safely return
+      return ret;
+
+  abort_traverse:
+      #ifdef BWTREE_DEBUG
+
+      assert(context_p->current_level >= 0);
+
+      context_p->current_level = -1;
+
+      context_p->abort_counter++;
+
+      #endif
+
+      // This is used to identify root node
+      context_p->current_snapshot.node_id = INVALID_NODE_ID;
+
+      context_p->abort_flag = false;
+
+      goto retry_traverse;
+
+      assert(false);
+      return nullptr;
+    }
+
+
   ///////////////////////////////////////////////////////////////////
   // Data Storage Core
   ///////////////////////////////////////////////////////////////////
@@ -7454,29 +7593,24 @@ before_switch:
 
     EpochNode *epoch_node_p = epoch_manager.JoinEpoch();
 
-    std::vector<ValueType> v{};
-
-    Context context{key};
-
-    TraverseReadOptimized(&context, &v);
-
-    auto itOldVal = std::find(v.begin(), v.end(), oldValue);
-    // auto itNewVal = std::find(v.begin(), v.end(), newValue);
-
-    /* update will be performed iff old value is exist and new value is not.*/
-    // if (itOldVal != v.end() && itNewVal == v.end()) {
-    /* YOU MUST use previous one to be percise, but in order to make test case easier
-     * we DO NOT check for the newValue's existence*/
-    if (itOldVal != v.end()) {
-      while(1) {// delete key-oldValue pair
+    /* update will be performed iff old value is exist and new value is not.
+     * YOU MUST use previous one to be percise, but in order to make test case easier
+     * we DO NOT check for the newValue's existence
+     */
+      while(1) {
         Context context{key};
         std::pair<int, bool> index_pair;
 
-        // Navigate leaf nodes to check whether the key-value
+        // Navigate leaf nodes to check whether the key-oldValue & key-newValue
         // pair exists
-        const KeyValuePair *item_p = Traverse(&context, &oldValue, &index_pair);
+        const std::pair<KeyValuePair, KeyValuePair> *item_p = Traverse(&context, &oldValue, &newValue, &index_pair);
 
-        if(item_p == nullptr) {
+        /* There is 3 reason for update() to fail
+         * 1. Traverse() aborted, returning nullptr
+         * 2. <key,oldValue> does not exist
+         * 3. <key,newValue> already exist
+         */
+        if(item_p == nullptr || item_p->first == nullptr || item_p->second != nullptr) {
           #ifdef BWTREE_DEBUG
           update_abort_count.fetch_add(1);
           #endif
@@ -7499,66 +7633,29 @@ before_switch:
                                    node_p,
                                    index_pair);
 
+       const LeafInsertNode *insert_node_p = \
+         LeafInlineAllocateOfType(LeafInsertNode,
+                                  node_p,
+                                  key,
+                                  newValue,
+                                  delete_node_p,
+                                  index_pair);// delete_node_p on 5th argv.
+
         bool ret = InstallNodeToReplace(node_id,
-                                        delete_node_p,
-                                        node_p);
+                                        insert_node_p,
+                                        node_p);// install insert_node_p
         if(ret == true) {
           break;
         } else {
           delete_node_p->~LeafDeleteNode();
-        }
-      }// delete key-oldValue pair done
-
-      while(1) {// insert key-newValue pair
-        Context context{key};
-        std::pair<int, bool> index_pair;
-
-        // Check whether the key-value pair exists
-        // Also if the key previously exists in the delta chain
-        // then return the position of the node using next_key_p
-        // if there is none then return nullptr
-        const KeyValuePair *item_p = Traverse(&context, &newValue, &index_pair);
-
-        assert(item_p == nullptr);
-
-        NodeSnapshot *snapshot_p = GetLatestNodeSnapshot(&context);
-
-        // We will CAS on top of this
-        const BaseNode *node_p = snapshot_p->node_p;
-        NodeID node_id = snapshot_p->node_id;
-
-        const LeafInsertNode *insert_node_p = \
-          LeafInlineAllocateOfType(LeafInsertNode,
-                                   node_p,
-                                   key,
-                                   newValue,
-                                   node_p,
-                                   index_pair);
-
-        bool ret = InstallNodeToReplace(node_id,
-                                        insert_node_p,
-                                        node_p);
-        if(ret == true) {
-          // If install is a success then just break from the loop
-          // and return
-          break;
-        } else {
           insert_node_p->~LeafInsertNode();
         }
-      }// insert key-newValue pair done
-    } else {
-      #ifdef BWTREE_DEBUG
-      update_abort_count.fetch_add(1);
-      #endif
-      epoch_manager.LeaveEpoch(epoch_node_p);
-
-      return false;
-    }
-
+      }// delete & insert key-oldValue pair done
     epoch_manager.LeaveEpoch(epoch_node_p);
 
     return true;
   }
+
 
 #ifdef BWTREE_PELOTON
 
