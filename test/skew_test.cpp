@@ -329,7 +329,7 @@ void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threa
   zipfian_key_list.reserve(key_num);
 
   // Initialize it with time() as the random seed
-  Zipfian zipf{(uint64_t)key_num, 0.95, (uint64_t)time(NULL)};
+  Zipfian zipf{(uint64_t)key_num, 0.99, (uint64_t)time(NULL)};
 
   // Populate the array with random numbers
   for(int i = 0;i < key_num;i++) {

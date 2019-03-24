@@ -3360,7 +3360,7 @@ abort_traverse:
     return nullptr;
   }
 
-    const std::pair<KeyValuePair, KeyValuePair> *Traverse(Context *context_p,
+    const std::pair<const KeyValuePair*, const KeyValuePair*> Traverse(Context *context_p,
                                  const ValueType *value_p1,
                                  const ValueType *value_p2,
                                  std::pair<int, bool> *index_pair_p) {
@@ -3368,7 +3368,6 @@ abort_traverse:
       // For value collection it always returns nullptr
       const KeyValuePair *found_pair_p1 = nullptr;
       const KeyValuePair *found_pair_p2 = nullptr;
-      const std::pair<KeyValuePair, KeyValuePair> *ret = nullptr;
 
   retry_traverse:
       assert(context_p->abort_flag == false);
@@ -3455,7 +3454,6 @@ abort_traverse:
           found_pair_p1 = NavigateLeafNode(context_p, *value_p1, index_pair_p);
         if (value_p2 != nullptr)
           found_pair_p2 = NavigateLeafNode(context_p, *value_p2, index_pair_p);
-        ret = std::make_pair(found_pair_p1, found_pair_p2);
       }
 
       if(context_p->abort_flag == true) {
@@ -3474,7 +3472,7 @@ abort_traverse:
       #endif
 
       // If there is no abort then we could safely return
-      return ret;
+      return std::make_pair(found_pair_p1, found_pair_p2);
 
   abort_traverse:
       #ifdef BWTREE_DEBUG
@@ -3495,7 +3493,7 @@ abort_traverse:
       goto retry_traverse;
 
       assert(false);
-      return nullptr;
+      return std::make_pair(nullptr, nullptr);
     }
 
 
@@ -7603,14 +7601,14 @@ before_switch:
 
         // Navigate leaf nodes to check whether the key-oldValue & key-newValue
         // pair exists
-        const std::pair<KeyValuePair, KeyValuePair> *item_p = Traverse(&context, &oldValue, &newValue, &index_pair);
+        const std::pair<const KeyValuePair*,const KeyValuePair*> item_p = Traverse(&context, &oldValue, &newValue, &index_pair);
 
         /* There is 3 reason for update() to fail
-         * 1. Traverse() aborted, returning nullptr
+         * 1. Traverse() aborted, returning <nullptr, nullptr>
          * 2. <key,oldValue> does not exist
          * 3. <key,newValue> already exist
          */
-        if(item_p == nullptr || item_p->first == nullptr || item_p->second != nullptr) {
+        if(item_p.first == nullptr || item_p.second != nullptr) {
           #ifdef BWTREE_DEBUG
           update_abort_count.fetch_add(1);
           #endif

@@ -450,7 +450,8 @@ int main(int argc, char **argv) {
     MakeBasicTree(t1);
     printf("\nNew Skew Update Test Starts\n");
     fflush(stdout);
-    ZipfianSkewTest(t1, 0, skew_test_max_key, skew_threads);
+    //ZipfianSkewTest(t1, 0, skew_test_max_key, skew_threads);
+    DistributeUpdateTest2(t1, skew_test_max_key/2, skew_test_max_key/2+1,skew_threads);
     printf("New Skew Update Test Done\n\n");
     fflush(stdout);
     DestroyTree(t1, true);
