@@ -216,89 +216,204 @@ void CleanCache() {
 }
 
 void DistributeUpdateTest2(TreeType *t, int start_index, int end_index, int skew_threads) {
+/*
+  Temporary code below
+ */
+//   const int num_thread = skew_test_thread_num;
+//   const int key_num = skew_test_max_key;
+//   const int iter = 2000000;
+
+//   if (skew_threads > num_thread) {
+//     std::cout << "skew_threads argv out of range\n";
+//     std::cout << "skew_threads: " << skew_threads << ", " \
+//               << "total_threads: " << num_thread << endl;
+
+//     return;
+//   }
+
+//   // This is used to record time taken for each individual thread
+//   double thread_time[num_thread];
+//   int failed_cnt[num_thread];
+//   for(int i = 0;i < num_thread;i++) {
+//     thread_time[i] = 0.0;
+//     failed_cnt[i] = 0;
+//   }
+
+//   std::chrono::time_point<std::chrono::system_clock> start, end;
+// //  CleanCache();
+//   printf("cache cleaned\n");
+//   fflush(stdout);
+//   sleep(1);
+//   start = std::chrono::system_clock::now();
+//   auto func2 = [key_num,
+//                 &thread_time,
+// 		&failed_cnt,
+//                 start_index,
+//                 end_index,
+//                 skew_threads,
+//                 iter,
+//                 num_thread](uint64_t thread_id, TreeType *t) {
+//     std::random_device r{};
+//     std::default_random_engine e1(r());
+//     std::uniform_int_distribution<long int> uniform_dist(0, key_num - 1);
+//     bool isSkew = (int)thread_id < skew_threads;
+//     if (isSkew)
+//       uniform_dist = std::uniform_int_distribution<long int>(start_index, end_index - 1);
+
+//     Timer timer{true};
+//     int failed = 0;
+//     for(long i = 0; i < iter; i++) {
+//       long int key = uniform_dist(e1);
+
+//       bool ret = t->Update(key, key, key);
+//       if (!ret)
+//         failed += 1;
+//     }
+
+//     double duration = timer.Stop();
+
+//     thread_time[thread_id] = duration;
+//     failed_cnt[thread_id] = failed;
+
+//     std::cout << "[" << (isSkew ? "Skew   ": "Uniform") << " Thread " \
+//               << std::setw(2) << thread_id << " Done] @ " \
+//               << std::fixed << std::setprecision(1) << std::setw(6) << iter / duration << " update/sec in " \
+//               << std::setprecision(5) << std::setw(8) <<  duration << " seconds" << endl;
+
+//     return;
+  // };
+
+  // LaunchParallelTestID(t, num_thread, func2, t);
+  // end = std::chrono::system_clock::now();
+
+  // std::chrono::duration<double> elapsed_seconds = end - start;
+  // double cpu_seconds = 0.0;
+  // int total_failed = 0;
+  // for(int i = 0;i < num_thread;i++) {
+  //   cpu_seconds += thread_time[i];
+  //   total_failed += failed_cnt[i];
+  // }
+
+  // std::cout << num_thread << " Threads BwTree: overall " \
+  //           << key_num / (cpu_seconds / num_thread) \
+  //           << " update/sec with " << total_failed << " failed operations\n";
+  // std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
+  // std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
+
+  // std::cout << "Skew Test with " << skew_threads << " threads," \
+  //           << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
+  // return;
+  
   const int num_thread = skew_test_thread_num;
   const int key_num = skew_test_max_key;
   const int iter = 2000000;
-
-  if (skew_threads > num_thread) {
-    std::cout << "skew_threads argv out of range\n";
-    std::cout << "skew_threads: " << skew_threads << ", " \
-              << "total_threads: " << num_thread << endl;
-
-    return;
-  }
-
-  // This is used to record time taken for each individual thread
+  std::cout << "No Duplicate" << endl; 
   double thread_time[num_thread];
-  int failed_cnt[num_thread];
-  for(int i = 0;i < num_thread;i++) {
-    thread_time[i] = 0.0;
-    failed_cnt[i] = 0;
-  }
-
   std::chrono::time_point<std::chrono::system_clock> start, end;
-//  CleanCache();
-  printf("cache cleaned\n");
-  fflush(stdout);
-  sleep(1);
   start = std::chrono::system_clock::now();
-  auto func2 = [key_num,
+  auto noDup = [key_num,
                 &thread_time,
-		&failed_cnt,
                 start_index,
                 end_index,
                 skew_threads,
                 iter,
-                num_thread](uint64_t thread_id, TreeType *t) {
-    std::random_device r{};
-    std::default_random_engine e1(r());
-    std::uniform_int_distribution<long int> uniform_dist(0, key_num - 1);
-    bool isSkew = (int)thread_id < skew_threads;
-    if (isSkew)
-      uniform_dist = std::uniform_int_distribution<long int>(start_index, end_index - 1);
+                num_thread](uint64_t thread_id, TreeType *t){
+                  std::random_device r{};
+                  std::default_random_engine e1(r());
+                  int each_range = key_num/num_thread;
+                  std::uniform_int_distribution<long int> uniform_dist(thread_id*each_range, (thread_id+1)*each_range);
+                  
+                  Timer timer{true};
+                  for(long i = 0; i < iter; i++) {
+                    long int key = uniform_dist(e1);
+                    bool ret = t->Update(key, key, key);
 
-    Timer timer{true};
-    int failed = 0;
-    for(long i = 0; i < iter; i++) {
-      long int key = uniform_dist(e1);
-
-      bool ret = t->Update(key, key, key);
-      if (!ret)
-        failed += 1;
-    }
-
-    double duration = timer.Stop();
-
-    thread_time[thread_id] = duration;
-    failed_cnt[thread_id] = failed;
-
-    std::cout << "[" << (isSkew ? "Skew   ": "Uniform") << " Thread " \
-              << std::setw(2) << thread_id << " Done] @ " \
-              << std::fixed << std::setprecision(1) << std::setw(6) << iter / duration << " update/sec in " \
-              << std::setprecision(5) << std::setw(8) <<  duration << " seconds" << endl;
-
-    return;
-  };
-
-  LaunchParallelTestID(t, num_thread, func2, t);
+                  }
+                  double duration = timer.Stop();
+                  thread_time[thread_id] = duration;
+                  return;                  
+                };
+  LaunchParallelTestID(t, num_thread, noDup, t);
   end = std::chrono::system_clock::now();
-
   std::chrono::duration<double> elapsed_seconds = end - start;
   double cpu_seconds = 0.0;
-  int total_failed = 0;
   for(int i = 0;i < num_thread;i++) {
     cpu_seconds += thread_time[i];
-    total_failed += failed_cnt[i];
   }
-
   std::cout << num_thread << " Threads BwTree: overall " \
-            << key_num / (cpu_seconds / num_thread) \
-            << " update/sec with " << total_failed << " failed operations\n";
+            << key_num / (cpu_seconds / num_thread);
   std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
   std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
 
-  std::cout << "Skew Test with " << skew_threads << " threads," \
-            << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
+  std::cout << "OneKey" << endl;
+  start = std::chrono::system_clock::now();
+  auto oneKey = [key_num,
+                &thread_time,
+                start_index,
+                end_index,
+                skew_threads,
+                iter,
+                num_thread](uint64_t thread_id, TreeType *t){
+                  
+                  Timer timer{true};
+                  for(long i = 0; i < iter; i++) {
+                    bool ret = t->Update(0, 0, 0);
+
+                  }
+                  double duration = timer.Stop();
+                  thread_time[thread_id] = duration;
+                  return;                  
+                };
+  LaunchParallelTestID(t, num_thread, oneKey, t);
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end - start;
+  cpu_seconds = 0.0;
+  for(int i = 0;i < num_thread;i++) {
+    cpu_seconds += thread_time[i];
+  }
+  std::cout << num_thread << " Threads BwTree: overall " \
+            << key_num / (cpu_seconds / num_thread);
+  std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
+  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
+
+  std::cout << "Half and Half" << endl;
+  start = std::chrono::system_clock::now();
+  auto halfHalf = [key_num,
+                &thread_time,
+                start_index,
+                end_index,
+                skew_threads,
+                iter,
+                num_thread](uint64_t thread_id, TreeType *t){
+                  bool isSkew = (int)thread_id < (num_thread/2);
+                  std::random_device r{};
+                  std::default_random_engine e1(r());
+                  std::uniform_int_distribution<long int> uniform_dist(0, key_num - 1);
+                  
+                  if (isSkew)
+                    uniform_dist = std::uniform_int_distribution<long int>(0, 2048);
+
+                  Timer timer{true};
+                  for(long i = 0; i < iter; i++) {
+                    long int key = uniform_dist(e1);
+
+                    bool ret = t->Update(key, key, key);
+                  }
+                  double duration = timer.Stop();
+                  thread_time[thread_id] = duration;
+                  return;                  
+                };
+  LaunchParallelTestID(t, num_thread, halfHalf, t);
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end - start;
+  cpu_seconds = 0.0;
+  for(int i = 0;i < num_thread;i++) {
+    cpu_seconds += thread_time[i];
+  }
+  std::cout << num_thread << " Threads BwTree: overall " \
+            << key_num / (cpu_seconds / num_thread);
+  std::cout << "Total CPU Time: " << cpu_seconds << " seconds\n";
+  std::cout << "Total Elapsed Time: " << elapsed_seconds.count() << " seconds" << endl;
   return;
 }
 
@@ -400,3 +515,4 @@ void ZipfianSkewTest(TreeType *t, int start_index, int end_index, int skew_threa
             << "Uniform Test with " << num_thread - skew_threads << " threads." << endl;
   return;
 }
+
