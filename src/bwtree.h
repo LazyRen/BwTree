@@ -1134,6 +1134,9 @@ class BwTree : public BwTreeBase {
     // to reserve space for the new node
     int item_count;
 
+    bool isSafe;
+    bool validated;
+
     /*
      * Constructor
      */
@@ -1146,7 +1149,9 @@ class BwTree : public BwTreeBase {
       high_key_p{p_high_key_p},
       type{p_type},
       depth{static_cast<short>(p_depth)},
-      item_count{p_item_count}
+      item_count{p_item_count},
+      isSafe{true},
+      validated{true}
     {}
   };
 
@@ -1315,11 +1320,19 @@ class BwTree : public BwTreeBase {
       return metadata.depth;
     }
 
+    inline void SetDepth(int depth) {
+      metadata.depth = depth;
+    }
+
     /*
      * GetItemCount() - Returns the item count of the current node
      */
     inline int GetItemCount() const {
       return metadata.item_count;
+    }
+
+    inline void SetItemCount(int count) {
+      metadata.item_count = count;
     }
 
     /*
@@ -1339,6 +1352,22 @@ class BwTree : public BwTreeBase {
 
       return;
     }
+
+    inline bool GetIsSafe() const {
+      return metadata.isSafe;
+    }
+
+    inline void SetIsSafe(bool isSafe) {
+      metadata.isSafe = isSafe;
+    }
+
+    inline bool GetValidated() const {
+      return metadata.validated;
+    }
+
+    inline void SetValidated(bool validated) {
+      metadata.validated = validated;
+    }
   };
 
   /*
@@ -1349,7 +1378,7 @@ class BwTree : public BwTreeBase {
    */
   class DeltaNode : public BaseNode {
    public:
-    const BaseNode *child_node_p;
+    BaseNode *child_node_p;
 
     /*
      * Constructor
@@ -3155,6 +3184,29 @@ class BwTree : public BwTreeBase {
     #endif
 
     return mapping_table[node_id].compare_exchange_strong(prev_p, node_p);
+  }
+
+  /*
+   * InstallNodeToReplace() - Install a node to replace a previous one
+   */
+  inline BaseNode* InstallNodeToReplace(NodeID node_id,
+                                   const BaseNode *node_p) {
+    // Make sure node id is valid and does not exceed maximum
+    assert(node_id != INVALID_NODE_ID);
+    assert(node_id < MAPPING_TABLE_SIZE);
+
+    // If idb is activated, then all operation will be blocked before
+    // they could call CAS and change the key
+    #ifdef INTERACTIVE_DEBUG
+    debug_stop_mutex.lock();
+    debug_stop_mutex.unlock();
+    #endif
+    NodeType type = node_p->GetType();
+    if (cur_type == NodeType::LeafInsertType || cur_type == NodeType::LeafDeleteType) {
+      node_p->setIsSafe(false);
+      node_p->setValidated(false);
+    }
+    return (DeltaNode*)node_p->child_node_p = mapping_table[node_id].exchange(node_p);
   }
 
   /*
@@ -7449,6 +7501,73 @@ before_switch:
     return ret;
   }
 
+  bool ValidationCheck(const BaseNode *start_node_p, BaseNode *cur_node_p) {
+    // There is nothing installed while TAS operation. No need to check validatoin.
+    if (start_node_p == (DeltaNode*)cur_node_p->child_node_p) {
+      cur_node_p->SetIsSafe(true);
+      cur_node_p->SetValidated(true);
+      return true;
+    }
+
+    BaseNode *checking_node_p = cur_node_p;
+    NodeType type = checking_node_p->GetType();
+    KeyValuePair item = (LeafDataNode*)checking_node_p->item;
+    short depth = 0;
+    int item_count = 0;
+
+    bool isFirst = true;
+    bool found_item = false;
+    cur_node_p = (DeltaNode*)cur_node_p->child_node_p;
+    while (cur_node_p != start_node_p) {
+      NodeType cur_type = cur_node_p->GetType();
+
+      // TODO: what to do if SMO delta node is found?
+      if (!(cur_type == NodeType::LeafInsertType || cur_type == NodeType::LeafDeleteType))
+        cur_node_p = (DeltaNode*)cur_node_p->child_node_p;
+
+      // Spin if there is another validation check in progress in early delta chain.
+      while (!cur_node_p->GetValidated());
+      if (!cur_node_p->GetIsSafe()) // Ignore invalid delta node.
+        cur_node_p = (DeltaNode*)cur_node_p->child_node_p;
+      else {                        // Valid delta node
+        if (isFirst) {              // to properly update metadata.
+          depth = cur_node_p->GetDepth();
+          item_count = cur_node_p->GetItemCount();
+          isFirst = false;
+        }
+        // Same <key,value> pair found during traversal.
+        // No need to go further after this point.
+        if ((LeafDataNode*)cur_node_p->item == item) {
+          if (cur_type == NodeType::LeafInsertType)
+            found_item = true;
+          break;
+        }
+      }
+
+      cur_node_p = (DeltaNode*)cur_node_p->child_node_p;
+    }
+    switch(type) {
+        case NodeType::LeafInsertType:
+          if (!found_item) {
+            checking_node_p->SetIsSafe(true);
+            checking_node_p->SetDepth(depth + 1);
+            checking_node_p->SetItemCount(count + 1);
+          }
+          break;
+        case NodeType::LeafDeleteType:
+          if (found_item) {
+            checking_node_p->SetIsSafe(true);
+            checking_node_p->SetDepth(depth + 1);
+            checking_node_p->SetItemCount(count - 1);
+          }
+          break;
+      }
+    checking_node_p->SetValidated(true);
+    if (checking_node_p->GetIsSafe())
+      return true;
+    else
+      return false;
+  }
 
   /*
    * PostLeafMergeNode() - Post an inner merge node
@@ -7640,15 +7759,20 @@ before_switch:
                                   delete_node_p,
                                   index_pair);// delete_node_p on 5th argv.
 
-        bool ret = InstallNodeToReplace(node_id,
-                                        insert_node_p,
-                                        node_p);// install insert_node_p
-        if(ret == true) {
-          break;
-        } else {
-          delete_node_p->~LeafDeleteNode();
-          insert_node_p->~LeafInsertNode();
-        }
+        // install insert_node_p & delete_node_p at once
+        // bool ret = InstallNodeToReplace(node_id,
+        //                                 insert_node_p,
+        //                                 node_p);
+        // if(ret == true) {
+        //   break;
+        // } else {
+        //   delete_node_p->~LeafDeleteNode();
+        //   insert_node_p->~LeafInsertNode();
+        // }
+        BaseNode* ret = InstallNodeToReplace(node_id,
+                                             insert_node_p)
+        //Let ValidationCheck() handles the case of ret == node_p
+        ValidationCheck(node_p, insert_node_p);
       }// delete & insert key-oldValue pair done
     epoch_manager.LeaveEpoch(epoch_node_p);
 
